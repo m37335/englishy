@@ -1,0 +1,14 @@
+services:
+  englishy:
+    build: .
+    ports:
+      - "8502:8502"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ENGLISHY_WEB_SEARCH_ENGINE=DuckDuckGo
+      - ENGLISHY_LM=openai/gpt-4o-mini
+    volumes:
+      - ./data:/app/data
+      - ./cache:/app/cache
+    env_file:
+      - .env 
