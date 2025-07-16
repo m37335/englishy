@@ -10,5 +10,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./cache:/app/cache
+      - ./tests:/app/tests
     env_file:
       - .env 
