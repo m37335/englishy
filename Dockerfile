@@ -1,7 +1,9 @@
-FROM python:3.12-slim
+FROM python:3.9-slim
 
 # install basic libs
 ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y swig
 
 ARG WORKDIR="/app"
 ENV WORKDIR=${WORKDIR}
@@ -9,7 +11,8 @@ WORKDIR /app
 
 RUN pip install uv
 COPY pyproject.toml pyproject.toml
-RUN uv sync --no-dev --no-python-downloads --no-cache
+RUN uv sync --no-dev --no-cache
+RUN pip install 'faiss-cpu>=1.9.0.post1'
 ENV PATH="/app/.venv/bin:$PATH"
 
 # ENV HF_HOME="/app/cache/"

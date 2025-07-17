@@ -132,7 +132,7 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         
         # Initialize AI modules with LM
         logger.info("Initializing QueryRefiner...")
-        query_refiner = QueryRefiner()
+        query_refiner = QueryRefiner(lm=lm)
         
         logger.info("Initializing QueryExpander...")
         query_expander = QueryExpander(lm=lm)
@@ -188,10 +188,19 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         status_text.text("Step 1/7: Refining query with grammar analysis...")
         progress_bar.progress(15)
         
-        # Query refinement
-        refined_query = query_refiner.refine(query)
+        # Query refinement with grammar analysis
+        refinement_result = query_refiner.grammar_aware_refiner(query=query)
+        refined_query = refinement_result["refined_query"]
         
         st.info(f"Refined query: {refined_query}")
+        
+        # Display grammar analysis results
+        if refinement_result.get("detected_grammar"):
+            st.info(f"検出された文法: {', '.join(refinement_result['detected_grammar'])}")
+        if refinement_result.get("related_items"):
+            st.info(f"関連項目: {len(refinement_result['related_items'])}件の文法項目を検出")
+        if refinement_result.get("translation") and refinement_result["translation"] != query:
+            st.info(f"英語翻訳: {refinement_result['translation']}")
         
         # Step 2: Web search
         status_text.text("Step 2/7: Searching for resources...")

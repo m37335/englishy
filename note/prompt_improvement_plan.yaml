@@ -1,0 +1,167 @@
+# Englishy AIモジュール プロンプト改善プロジェクト計画・設計書
+# 保存場所: englishy/note/prompt_improvement_plan.yaml
+
+project:
+  name: "Englishy AIモジュール プロンプト改善"
+  goal: |
+    各AIモジュール（QueryRefiner, GrammarAnalyzer, QueryExpander, OutlineCreater, MindMapMaker等）のプロンプトを見直し、
+    「より意図通りの出力」「一貫性・再現性の向上」「ユーザー体験の最適化」を実現する。
+  rules:
+    - "テストスクリプト（tests/配下）以外に新たなファイルは原則として作成しないこと。"
+    - "既存要素・命名規則を優先的に再利用すること。"
+    - "設計書・ガイドラインはnote/配下に保存すること。"
+    - "DB・API・外部仕様変更時は必ず設計書を更新すること。"
+
+modules:
+  - QueryRefiner
+  - GrammarAnalyzer
+  - QueryExpander
+  - OutlineCreater
+  - MindMapMaker
+  - ReportWriter
+  - RelatedTopicsWriter
+  - ReferencesWriter
+
+steps:
+  - name: "現状調査"
+    description: "各AIモジュールのプロンプト・指示文・出力例を収集し、典型的な入力・出力パターンを整理する。"
+  - name: "課題抽出"
+    description: "出力のズレ・曖昧さ・一貫性欠如などの課題を洗い出し、ユーザー体験・要件とのギャップを明確化する。"
+  - name: "改善設計"
+    description: "各モジュールごとに新しいプロンプト案・指示文を設計し、出力フォーマットやガイドラインも明記する。"
+  - name: "テスト設計・実装"
+    description: "改善前後の出力比較用テストケースを作成し、テストスクリプト（pytest等）で自動化する。"
+  - name: "評価・反映"
+    description: "テスト結果をもとに改善案を評価・修正し、本番コード・ドキュメントへ反映する。"
+  - name: "運用・継続改善"
+    description: "改善内容・ガイドラインをドキュメント化し、継続的なフィードバック・改善体制を構築する。"
+
+outputs:
+  - "各AIモジュールの新プロンプト案・指示文（設計書内に記載）"
+  - "テストスクリプト（tests/配下）"
+  - "改善内容・ガイドラインまとめ（note/配下）"
+  - "before/after出力例・評価レポート"
+
+design_template: |
+  # 設計書雛形
+  module: <対象モジュール名>
+  current_prompt: |
+    <現行プロンプト例>
+  issues: |
+    <課題点>
+  improvement: |
+    <改善案（新プロンプト）>
+  output_format: |
+    <出力フォーマット例>
+  test_cases: |
+    <テストケース例>
+  notes: |
+    <備考> 
+
+flow:
+  description: |
+    本プロジェクトの改善作業は、以下のフロー図に従って段階的に進める。
+    各ステップごとに現状調査・課題抽出・プロンプト改善・テストを実施する。
+  diagram: |
+    [ユーザー入力]
+       ↓
+    [QueryRefiner（文法認識型リファイン）]
+       ↓
+    [Web検索]（オプション）
+       ↓
+    [GrammarAnalyzer（文法構造解析）]
+       ↓
+    [QueryExpander（トピック拡張）]
+       ↓
+    [OutlineCreater（アウトライン生成）]
+       ↓
+    [レポート生成（Lead/Section/Conclusion Writer）]
+       ↓
+    [関連トピック・参考文献生成]
+       ↓
+    [MindMapMaker（マインドマップ生成）]（オプション）
+       ↓
+    [Streamlitで表示・保存] 
+
+- module: QueryRefiner
+  current_prompt: |
+    英語プロンプトのみを使用する。
+    例：
+      - "Extract the main English grammar point(s) present in the following sentence for the purpose of web search. Output only the most relevant grammar term(s) in English (e.g., 'subjunctive mood', 'passive voice', etc.). If the input is in Japanese, translate the key grammar point(s) into English for search."
+  issues: |
+    - 目的が曖昧になりやすい（解説用・検索用の混在）
+    - 文法項目抽出の精度・一貫性（例：仮定法過去、受動態など主要文法項目を正確に抽出できるか）
+    - 不要なクラス・メソッドの存在（レガシーや未使用部分）
+    - refined_query生成時のロジックがハードコーディング気味
+    - 日本語→英語翻訳が簡易的
+    - 部分一致による誤変換（例：比較級→comparison級）
+  improvement: |
+    - 「web検索用クエリ抽出」に特化したプロンプト・ロジックへ明確化
+    - プロンプト・ロジックは英語のみで統一し、日本語入力時も内部で英語に変換して英語プロンプトに渡す
+    - 日本語プロンプトは不要
+    - 文法項目抽出のルール・粒度を統一し、主要文法項目（仮定法過去、受動態など）を正確に返す
+    - コードの整理（不要なクラス・メソッドの削除）
+    - 必要に応じて翻訳精度向上も検討
+    - 日本語→英語変換辞書の改善（部分一致誤変換の防止）
+    - Docker環境でのテスト自動化実装
+  output_format: |
+    refined_query: 主要文法項目（英語、例："subjunctive mood", "passive voice" など）
+    detected_grammar: 検出文法リスト（英語）
+    original_query: 入力文
+    translation: 英訳（必要時）
+  test_cases: |
+    - 入力: "But I ( wish I were better at) playing it.について"
+      期待出力: refined_query: "subjunctive mood"
+    - 入力: "Because it ( is written through the eyes ) of a little dog.について"
+      期待出力: refined_query: "passive voice"
+    - 入力: "仮定法過去" → 期待出力: "subjunctive mood"
+    - 入力: "受動態" → 期待出力: "passive voice"
+    - 入力: "受け身" → 期待出力: "passive voice"
+    - 入力: "比較級" → 期待出力: "comparative"
+    - 入力: "最上級" → 期待出力: "superlative"
+    - 入力: "これは仮定法過去と受動態の例です。" → 期待出力: "subjunctive mood" と "passive voice" を含む
+  notes: |
+    - refined_queryはweb検索で最も有効な主要文法項目（英語）を返すことを重視
+    - 出力の一貫性・粒度統一を優先
+    - 不要なクラス・メソッドの削除も今後のタスクに含める
+    - 日本語プロンプトは不要。全て英語プロンプトで統一
+    - 変換辞書は長いキーから順にreplaceし、部分一致誤変換を防止
+    - テストはDocker環境で自動実行可能
+
+# 実装済み改善内容（2025年7月）
+implemented_improvements:
+  - date: "2025-07-17"
+    module: "QueryRefiner"
+    changes:
+      - "日本語→英語変換辞書の改善"
+        - "部分一致による誤変換（比較級→comparison級）を防止"
+        - "変換辞書から「比較」を削除し、具体的な文法用語のみを英訳"
+        - "キーを長い順にreplaceし、より具体的な文法用語が先に変換されるように調整"
+      - "Docker環境でのテスト自動化実装"
+        - "tests/test_query_refiner.py でpytest形式のテストを実装"
+        - "docker-compose.ymlにtestsディレクトリのマウント設定を追加"
+        - "コンテナ内でpytest、dspy-aiをインストール"
+        - "全テストケースがパスすることを確認"
+      - "変換辞書の拡充"
+        - "仮定法過去 → subjunctive mood"
+        - "受動態/受け身 → passive voice"
+        - "比較級 → comparative"
+        - "最上級 → superlative"
+        - "関係代名詞 → relative pronoun"
+        - "不定詞の名詞的用法 → infinitive (noun use)"
+        - "分詞の形容詞的用法 → participle (adjective use)"
+        - "三単現 → third person singular"
+        - "There is are → there is/are construction"
+        - "命令文 → imperative sentence"
+        - "感嘆文 → exclamatory sentence"
+        - "現在完了進行形 → present perfect continuous"
+    test_results:
+      - "全テストケース（13件）がパス"
+      - "単一文法語の変換テスト（12件）"
+      - "文中複数文法語の変換テスト（1件）"
+      - "Docker環境での自動テスト実行が正常動作"
+    next_steps:
+      - "他のAIモジュール（GrammarAnalyzer, QueryExpander等）のプロンプト改善"
+      - "より多くのテストケースの追加"
+      - "変換辞書のさらなる拡充"
+      - "パフォーマンステストの実装" 
