@@ -2,18 +2,17 @@ import re
 from typing import List, Dict, Optional, Tuple
 from .grammar_dictionary import get_grammar_dictionary
 # 共通ユーティリティをimport
-from .grammar_utils import grammar_en_map, extract_grammar_labels
+from .grammar_utils import grammar_en_map, extract_grammar_labels, translate_to_english_grammar
 
 
 class GrammarAnalyzer:
-    """英文法構造解析と関連項目抽出を行うクラス"""
+    """英文法構造解析と関連項目抽出を行うクラス（完全共通化版）"""
     
     def __init__(self):
         self.grammar_dict = get_grammar_dictionary()
-        # self.grammar_en_mapは削除（共通辞書を利用）
     
     def analyze_text(self, text: str) -> Dict[str, any]:
-        """テキストの文法構造を解析"""
+        """テキストの文法構造を解析（grammar_utilsを活用）"""
         # 英文を抽出
         english_sentences = self._extract_english_sentences(text)
         
@@ -24,17 +23,16 @@ class GrammarAnalyzer:
             'key_points': []
         }
         
+        # 入力テキスト全体から文法ラベルを抽出（grammar_utils活用）
+        all_grammar_labels = extract_grammar_labels(text)
+        analysis_result['grammar_structures'] = all_grammar_labels
+        
         for sentence in english_sentences:
             sentence_analysis = self._analyze_sentence(sentence)
-            analysis_result['grammar_structures'].extend(sentence_analysis['structures'])
             analysis_result['related_topics'].extend(sentence_analysis['topics'])
             analysis_result['key_points'].extend(sentence_analysis['points'])
         
         # 重複を除去
-        grammar_structures_ja = list(set(analysis_result['grammar_structures']))
-        # 日本語→英語変換（共通辞書を利用）
-        grammar_structures_en = [grammar_en_map.get(s, s) for s in grammar_structures_ja]
-        analysis_result['grammar_structures'] = grammar_structures_en
         analysis_result['related_topics'] = list(set(analysis_result['related_topics']))
         analysis_result['key_points'] = list(set(analysis_result['key_points']))
         
@@ -51,6 +49,10 @@ class GrammarAnalyzer:
         for sentence in sentences:
             if self._is_valid_english_sentence(sentence):
                 valid_sentences.append(sentence.strip())
+        
+        # 文が抽出されない場合は、テキスト全体を1つの文として扱う
+        if not valid_sentences and self._is_valid_english_sentence(text):
+            valid_sentences.append(text.strip())
         
         return valid_sentences
     
@@ -70,28 +72,49 @@ class GrammarAnalyzer:
         return has_subject and has_verb
     
     def _analyze_sentence(self, sentence: str) -> Dict[str, any]:
-        """個別の文を解析"""
-        structures = []
+        """個別の文を解析（grammar_utilsを活用）"""
         topics = []
         points = []
         
-        # 文法構造の検出
-        structures.extend(self._detect_grammar_structures(sentence))
+        # 文から文法ラベルを抽出（grammar_utils活用）
+        sentence_grammar_labels = extract_grammar_labels(sentence)
         
         # 関連トピックの抽出
-        topics.extend(self._extract_related_topics(sentence))
+        topics.extend(self._extract_related_topics(sentence, sentence_grammar_labels))
         
         # 重要なポイントの抽出
         points.extend(self._extract_key_points(sentence))
         
         return {
-            'structures': structures,
             'topics': topics,
             'points': points
         }
     
-    def _detect_grammar_structures(self, sentence: str) -> List[str]:
-        """文法構造を検出"""
+    def _extract_related_topics(self, sentence: str, grammar_labels: List[str]) -> List[str]:
+        """関連トピックを抽出（grammar_utilsの結果を活用）"""
+        topics = []
+        
+        # grammar_utilsで抽出された文法ラベルに関連するトピックを検索
+        for label in grammar_labels:
+            # GrammarDictionaryから関連項目を検索
+            related_items = self.grammar_dict.search_by_keyword(label)
+            for item in related_items[:2]:  # 上位2件まで
+                topics.append(item.get('title', ''))
+        
+        # 従来の検出ロジックも併用（grammar_utilsで検出されない場合の補完）
+        traditional_structures = self._detect_traditional_grammar_structures(sentence)
+        for structure in traditional_structures:
+            # 日本語→英語変換（grammar_utils活用）
+            english_structure = translate_to_english_grammar(structure)
+            if english_structure != structure:  # 変換された場合
+                related_items = self.grammar_dict.search_by_keyword(english_structure)
+                for item in related_items[:1]:  # 上位1件まで
+                    topics.append(item.get('title', ''))
+        
+        return topics
+    
+    def _detect_traditional_grammar_structures(self, sentence: str) -> List[str]:
+        """従来の文法構造検出（grammar_utilsの補完用）"""
         structures = []
         
         # 時制の検出
@@ -126,20 +149,6 @@ class GrammarAnalyzer:
         
         return structures
     
-    def _extract_related_topics(self, sentence: str) -> List[str]:
-        """関連トピックを抽出"""
-        topics = []
-        
-        # 検出された文法構造に関連するトピックを検索
-        structures = self._detect_grammar_structures(sentence)
-        for structure in structures:
-            # GrammarDictionaryから関連項目を検索
-            related_items = self.grammar_dict.search_by_keyword(structure)
-            for item in related_items[:2]:  # 上位2件まで
-                topics.append(item.get('title', ''))
-        
-        return topics
-    
     def _extract_key_points(self, sentence: str) -> List[str]:
         """重要なポイントを抽出"""
         points = []
@@ -164,7 +173,10 @@ class GrammarAnalyzer:
     
     def get_grammar_explanation(self, grammar_structure: str) -> Optional[str]:
         """特定の文法構造の解説を取得"""
-        items = self.grammar_dict.search_by_keyword(grammar_structure)
+        # grammar_utilsで英語変換を試行
+        english_structure = translate_to_english_grammar(grammar_structure)
+        
+        items = self.grammar_dict.search_by_keyword(english_structure)
         if not items:
             return None
         
@@ -172,16 +184,16 @@ class GrammarAnalyzer:
         return best_match.get('content', '')
     
     def get_learning_path(self, grammar_structures: List[str]) -> List[Dict]:
-        """学習パスを生成"""
+        """学習パスを生成（grammar_utilsの結果を活用）"""
         learning_path = []
         
         for structure in grammar_structures:
             # 基礎から応用への順序を決定
-            if structure in ['現在形', '過去形', 'be動詞']:
+            if structure in ['present simple', 'past simple', 'be verb']:
                 level = 'basic'
-            elif structure in ['現在進行形', '過去進行形', '現在完了形']:
+            elif structure in ['present continuous', 'past continuous', 'present perfect']:
                 level = 'intermediate'
-            elif structure in ['仮定法', '関係代名詞', '不定詞']:
+            elif structure in ['subjunctive mood', 'relative pronoun', 'infinitive']:
                 level = 'advanced'
             else:
                 level = 'intermediate'
