@@ -11,7 +11,7 @@ WORKDIR /app
 
 RUN pip install uv
 COPY pyproject.toml pyproject.toml
-RUN uv sync --no-dev --no-cache
+RUN uv sync --no-cache
 RUN pip install 'faiss-cpu>=1.9.0.post1'
 ENV PATH="/app/.venv/bin:$PATH"
 

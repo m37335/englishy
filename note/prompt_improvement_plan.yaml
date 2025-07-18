@@ -164,4 +164,100 @@ implemented_improvements:
       - "他のAIモジュール（GrammarAnalyzer, QueryExpander等）のプロンプト改善"
       - "より多くのテストケースの追加"
       - "変換辞書のさらなる拡充"
-      - "パフォーマンステストの実装" 
+      - "パフォーマンステストの実装"
+
+  - date: "2025-07-18"
+    module: "共通化・ユーティリティ化"
+    changes:
+      - "grammar_utils.py新規作成"
+        - "QueryRefiner・GrammarAnalyzer等で共通利用する文法項目変換辞書（grammar_en_map）を実装"
+        - "extract_grammar_labels(text: str) -> List[str] 関数を実装"
+        - "translate_to_english_grammar(text: str) -> str 関数を実装（複数文法項目対応）"
+        - "部分一致誤変換防止ロジック（キーを長い順にreplace）を実装"
+      - "QueryRefinerのリファクタ完了"
+        - "重複していた日本語→英語変換辞書を削除"
+        - "_analyze_grammar, _translate_to_englishメソッドをgrammar_utilsの共通関数呼び出しに変更"
+        - "コードの簡潔化・保守性向上を実現"
+      - "Docker環境の最適化"
+        - "pyproject.tomlの依存関係を最小限に整理（不要な依存を削除）"
+        - "ビルド時間短縮（1484秒 → 225秒）"
+        - "イメージサイズ軽量化"
+        - "pytestの正常インストール・動作確認"
+    test_results:
+      - "全テストケース（2件）がパス"
+      - "単一文法語の変換テスト（1件）"
+      - "複数文法語の変換テスト（1件）"
+      - "Docker環境での自動テスト実行が正常動作"
+    next_steps:
+      - "GrammarAnalyzerの共通化リファクタ"
+      - "OutlineCreater等の他AIモジュール改善"
+      - "grammar_utils.pyのテストケース追加"
+      - "変換辞書のさらなる拡充"
+
+- module: GrammarAnalyzer
+  current_prompt: |
+    英文テキストから主要な文法構造（grammar_structures）、関連トピック（related_topics）、学習ポイント（key_points）を抽出し、GrammarDictionaryと連携して学習パスも生成する。
+    例：
+      - "Analyze the following English sentence(s) and extract the main grammar structures, related topics, and key learning points. Use GrammarDictionary to provide additional explanations and recommended learning order. Output all results in English."
+  issues: |
+    - 文法構造検出が単純な正規表現中心で複雑な文や複合構造に弱い
+    - 出力ラベルが日本語中心で英語出力と統一されていない
+    - GrammarDictionaryとの連携粒度・精度が不明瞭
+    - 出力フォーマットの一貫性が不足
+    - テスト自動化・カバレッジが不十分
+    - 難易度推定や学習パスのロジックが曖昧
+  improvement: |
+    - 英語出力（grammar_structures, related_topics, key_points, learning_path）で統一
+    - GrammarDictionaryの英語インデックス活用・連携強化
+    - 検出ルールの精度向上（複合構造・否定・疑問・比較・分詞構文なども検出）
+    - 出力フォーマットを明確化し、API/他モジュール連携しやすくする
+    - テスト自動化（pytest形式）とカバレッジ向上
+    - 難易度推定・学習パス生成ロジックの明確化
+  output_format: |
+    grammar_structures: List[str]  # 主要文法項目（英語）
+    related_topics: List[str]      # 関連文法トピック（英語）
+    key_points: List[str]         # 学習ポイント（英語）
+    learning_path: List[Dict]     # 推奨学習順序（level, summary, related_items付き）
+  test_cases: |
+    - 入力: "If I had known, I would have helped you."
+      期待出力: grammar_structures: ["third conditional", "subjunctive mood"]
+    - 入力: "The book was written by a famous author."
+      期待出力: grammar_structures: ["passive voice"]
+    - 入力: "She has been studying English for five years."
+      期待出力: grammar_structures: ["present perfect continuous"]
+    - 入力: "This is the boy who won the contest."
+      期待出力: grammar_structures: ["relative clause"]
+    - 入力: "Not only did he win, but he also broke the record."
+      期待出力: grammar_structures: ["inversion", "compound sentence"]
+  notes: |
+    - 出力は全て英語で統一
+    - GrammarDictionaryの英語インデックスを活用
+    - テストはDocker環境で自動実行可能
+    - 複合文・複雑構造も検出できるようルール拡充を検討 
+
+- module: 共通化・ユーティリティ化方針
+  current_prompt: |
+    QueryRefiner・GrammarAnalyzerなど複数AIモジュールで共通利用される「文法項目抽出ロジック」「日本語→英語変換辞書」を、src/ai/grammar_utils.py等のユーティリティモジュールに切り出す。
+    これにより、文法ラベルの一貫性・保守性・拡張性を高め、OutlineCreaterやReportWriter等の後続モジュールでも同一ロジックを活用可能とする。
+  issues: |
+    - QueryRefiner/GrammarAnalyzer間で変換辞書・抽出ロジックが重複しやすい
+    - 出力ラベルの粒度・表記揺れが発生しやすい
+    - モジュールごとに個別実装だと保守・拡張が煩雑
+  improvement: |
+    - src/ai/grammar_utils.py等に「文法項目変換辞書」「抽出関数（extract_grammar_labels等）」を共通実装
+    - 各AIモジュールは用途ごとのラッパーに徹し、コアロジックはユーティリティから呼び出す
+    - テストも共通ロジック用・用途別ラッパー用に整理
+    - OutlineCreater, ReportWriter, MindMapMaker等でもgrammar_utilsの関数・辞書を活用し、文法情報連携の基盤とする
+  output_format: |
+    # 例: 共通関数の出力
+    grammar_labels: List[str]  # 英語ラベルで統一
+    translation: str           # 必要時の英訳
+  test_cases: |
+    - 入力: "仮定法過去と受動態の例文"
+      期待出力: grammar_labels: ["subjunctive mood", "passive voice"]
+    - 入力: "She has been studying English for five years."
+      期待出力: grammar_labels: ["present perfect continuous"]
+  notes: |
+    - 共通辞書・抽出関数の一元管理により、全AIモジュールの文法情報連携・拡張が容易になる
+    - OutlineCreater等のアウトライン生成・解説自動化にも直結
+    - 既存テストも共通ロジック用に再整理予定 

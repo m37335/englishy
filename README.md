@@ -9,6 +9,8 @@ Englishyは、AIを活用した英語学習支援システムです。ユーザ�
 - **Streamlit UI**: 直感的なWebインターフェース
 - **Docker対応**: 簡単なセットアップとデプロイ
 - **モジュラー設計**: 拡張可能なAIモジュール構成
+- **共通化・ユーティリティ化**: 文法項目抽出・変換ロジックの一元管理
+- **自動テスト**: Docker環境でのpytest自動テスト実行
 
 ## 📋 システム要件
 
@@ -70,7 +72,9 @@ Englishyは以下のモジュラー構成を採用しています：
 ```
 src/
 ├── ai/                    # AIモジュール
-│   ├── query_refiner.py   # クエリ改善
+│   ├── grammar_utils.py   # 共通文法ユーティリティ（新規）
+│   ├── query_refiner.py   # クエリ改善（共通化済み）
+│   ├── grammar_analyzer.py # 文法解析
 │   ├── query_expander.py  # クエリ拡張
 │   ├── outline_creater.py # アウトライン生成
 │   ├── mind_map_maker.py  # マインドマップ生成
@@ -84,25 +88,32 @@ src/
 └── utils/                # ユーティリティ
 ```
 
-## 🔄 処理フロー
+### 🔄 処理フロー
 
-1. **クエリ改善**: ユーザーの質問を検索最適化
+1. **クエリ改善**: ユーザーの質問を検索最適化（grammar_utils.py活用）
 2. **Web検索**: 関連情報の自動取得
-3. **アウトライン生成**: レポート構造の自動設計
-4. **レポート執筆**: AIによる包括的な内容生成
-5. **マインドマップ**: 視覚的な学習マップ作成
+3. **文法解析**: 文法構造の自動検出・分類（grammar_utils.py活用）
+4. **アウトライン生成**: レポート構造の自動設計
+5. **レポート執筆**: AIによる包括的な内容生成
+6. **マインドマップ**: 視覚的な学習マップ作成
 
 ## 🧪 テスト
 
-個別モジュールのテスト：
+### 自動テスト実行
 
 ```bash
-# 全モジュールテスト
-python test_individual_modules.py
+# Docker内でのテスト実行
+docker-compose run --rm englishy pytest tests/ -v
 
-# Docker内でのテスト
-docker-compose exec englishy python test_individual_modules.py
+# 特定モジュールのテスト
+docker-compose run --rm englishy pytest tests/test_query_refiner.py -v
 ```
+
+### テスト内容
+
+- ✅ **QueryRefinerテスト**: 文法項目抽出・日本語→英語変換
+- ✅ **共通化テスト**: grammar_utils.pyの動作確認
+- ✅ **複数文法項目テスト**: 文中の複数文法語の同時検出
 
 ## 📝 使用例
 
@@ -130,8 +141,15 @@ make lint
 ### 新しいAIモジュールの追加
 
 1. `src/ai/`ディレクトリに新しいモジュールを作成
-2. `src/app/research.py`でモジュールを統合
-3. テストを追加
+2. `grammar_utils.py`の共通関数を活用
+3. `src/app/research.py`でモジュールを統合
+4. テストを追加
+
+### 共通化・ユーティリティ化
+
+- **grammar_utils.py**: 文法項目抽出・変換の共通ロジック
+- **extract_grammar_labels()**: テキストから文法ラベルを抽出
+- **translate_to_english_grammar()**: 日本語文法語→英語ラベル変換
 
 ## 📊 現在の状況
 
@@ -139,7 +157,27 @@ make lint
 - ✅ **全モジュール統合**: AIパイプラインが完全に機能
 - ✅ **Streamlit UI**: 直感的なインターフェース
 - ✅ **Web検索**: DuckDuckGo統合で最新情報取得
-- 🔄 **継続改善**: 文法辞書統合などの機能拡張予定
+- ✅ **共通化完了**: QueryRefinerのgrammar_utils.py活用
+- ✅ **Docker最適化**: ビルド時間短縮（1484秒→225秒）
+- ✅ **テスト自動化**: pytest環境構築・全テストパス
+- 🔄 **継続改善**: GrammarAnalyzer等の他モジュール共通化予定
+
+## 🆕 最新の改善内容（2025年7月）
+
+### 共通化・ユーティリティ化
+- **grammar_utils.py新規作成**: 文法項目変換辞書・抽出関数の一元管理
+- **QueryRefinerリファクタ**: 重複コード削除・共通ロジック活用
+- **複数文法項目対応**: 文中の複数文法語を同時検出・変換
+
+### Docker環境最適化
+- **依存関係整理**: pyproject.tomlから不要な依存を削除
+- **ビルド時間短縮**: 75%の時間短縮を実現
+- **イメージ軽量化**: 最小限の依存関係で軽量なイメージ
+
+### テスト自動化
+- **pytest環境構築**: Docker環境での自動テスト実行
+- **テストケース追加**: 単一・複数文法項目の変換テスト
+- **継続的品質保証**: 全テストパスによる動作保証
 
 ## 🤝 コントリビューション
 

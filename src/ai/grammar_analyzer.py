@@ -8,6 +8,46 @@ class GrammarAnalyzer:
     
     def __init__(self):
         self.grammar_dict = get_grammar_dictionary()
+        self.grammar_en_map = {
+            '現在進行形': 'present continuous',
+            '過去進行形': 'past continuous',
+            '現在完了形': 'present perfect',
+            '現在完了進行形': 'present perfect continuous',
+            '不定詞': 'infinitive',
+            '動名詞': 'gerund',
+            '関係代名詞': 'relative pronoun',
+            '仮定法': 'subjunctive mood',
+            '受動態': 'passive voice',
+            '助動詞': 'modal verb',
+            'be動詞': 'be verb',
+            '一般動詞': 'regular verb',
+            '過去形': 'past tense',
+            '現在形': 'present tense',
+            '未来形': 'future tense',
+            '比較級': 'comparative',
+            '最上級': 'superlative',
+            '前置詞': 'preposition',
+            '接続詞': 'conjunction',
+            '副詞': 'adverb',
+            '形容詞': 'adjective',
+            '名詞': 'noun',
+            '代名詞': 'pronoun',
+            '重文': 'compound sentence',
+            '複文': 'complex sentence',
+            '三単現': 'third person singular',
+            '否定文': 'negative sentence',
+            '疑問文': 'interrogative sentence',
+            '命令文': 'imperative sentence',
+            '感嘆文': 'exclamatory sentence',
+            '倒置': 'inversion',
+            '関係副詞': 'relative adverb',
+            '関係代名詞節': 'relative clause',
+            '分詞構文': 'participial construction',
+            '仮定法過去': 'subjunctive mood',
+            '仮定法過去完了': 'past perfect subjunctive',
+            '直接話法': 'direct speech',
+            '間接話法': 'indirect speech',
+        }
     
     def analyze_text(self, text: str) -> Dict[str, any]:
         """テキストの文法構造を解析"""
@@ -28,7 +68,10 @@ class GrammarAnalyzer:
             analysis_result['key_points'].extend(sentence_analysis['points'])
         
         # 重複を除去
-        analysis_result['grammar_structures'] = list(set(analysis_result['grammar_structures']))
+        grammar_structures_ja = list(set(analysis_result['grammar_structures']))
+        # 日本語→英語変換
+        grammar_structures_en = [self.grammar_en_map.get(s, s) for s in grammar_structures_ja]
+        analysis_result['grammar_structures'] = grammar_structures_en
         analysis_result['related_topics'] = list(set(analysis_result['related_topics']))
         analysis_result['key_points'] = list(set(analysis_result['key_points']))
         
