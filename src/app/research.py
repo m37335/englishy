@@ -25,6 +25,7 @@ from src.ai.report_writer import (
 )
 from src.ai.mindmap_maker import MindMapMaker
 from src.ai.grammar_analyzer import get_grammar_analyzer
+from src.ai.llm_grammar_analyzer import LLMGrammarAnalyzer
 from src.ai.english_extractor import get_english_extractor
 from src.retriever.article_search.faiss import FAISSSearch
 # from utils.report_manager import ReportManager
@@ -79,6 +80,13 @@ def create_research_page():
                 help="Choose the complexity level of the report"
             )
         
+        # LLM-based grammar analysis option
+        use_llm_analysis = st.checkbox(
+            "Use LLM-based grammar analysis (Recommended)",
+            value=True,
+            help="Use advanced AI for more accurate grammar structure analysis"
+        )
+        
         submitted = st.form_submit_button("🚀 Start Research")
         
         if submitted and query:
@@ -88,7 +96,8 @@ def create_research_page():
                 "include_web_search": include_web_search,
                 "include_mindmap": include_mindmap,
                 "search_depth": search_depth,
-                "report_style": report_style
+                "report_style": report_style,
+                "use_llm_analysis": use_llm_analysis
             }
             st.session_state.start_research = True
 
@@ -100,7 +109,8 @@ def create_research_page():
             data["include_web_search"], 
             data["include_mindmap"], 
             data["search_depth"], 
-            data["report_style"]
+            data["report_style"],
+            data["use_llm_analysis"]
         ))
         st.session_state.start_research = False
     
@@ -122,7 +132,7 @@ def create_research_page():
                 st.rerun()
 
 
-async def _start_research(query, include_web_search, include_mindmap, search_depth, report_style):
+async def _start_research(query, include_web_search, include_mindmap, search_depth, report_style, use_llm_analysis):
     """Start the research process."""
     # Initialize AI components
     try:
@@ -216,9 +226,38 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         status_text.text("Step 3/7: Analyzing grammar structures...")
         progress_bar.progress(45)
         
-        grammar_analyzer = get_grammar_analyzer()
-        grammar_analysis = grammar_analyzer.analyze_text(refined_query)
-        st.info(f"Grammar structures detected: {', '.join(grammar_analysis['grammar_structures'])}")
+        # Choose grammar analyzer based on user preference
+        if use_llm_analysis:
+            try:
+                # Use LLM-based grammar analyzer
+                llm_analyzer = LLMGrammarAnalyzer()
+                grammar_analysis = llm_analyzer.analyze_text(refined_query)
+                st.info("🤖 Using LLM-based grammar analysis for higher accuracy")
+            except Exception as e:
+                logger.warning(f"LLM analysis failed, falling back to rule-based: {e}")
+                st.warning("⚠️ LLM analysis failed, using rule-based analysis instead")
+                grammar_analyzer = get_grammar_analyzer()
+                grammar_analysis = grammar_analyzer.analyze_text(refined_query)
+        else:
+            # Use traditional rule-based grammar analyzer
+            grammar_analyzer = get_grammar_analyzer()
+            grammar_analysis = grammar_analyzer.analyze_text(refined_query)
+            st.info("📋 Using rule-based grammar analysis")
+        
+        # Display grammar analysis results with enhanced information
+        if grammar_analysis.get('grammar_structures'):
+            st.success(f"🔍 Grammar structures detected: {', '.join(grammar_analysis['grammar_structures'])}")
+        
+        if grammar_analysis.get('related_topics'):
+            st.info(f"📚 Related topics: {', '.join(grammar_analysis['related_topics'])}")
+        
+        if grammar_analysis.get('key_points'):
+            st.info("💡 Key learning points:")
+            for point in grammar_analysis['key_points']:
+                st.write(f"  • {point}")
+        
+        if grammar_analysis.get('error'):
+            st.warning(f"⚠️ Grammar analysis warning: {grammar_analysis['error']}")
         
         # Step 4: Query expansion
         status_text.text("Step 4/7: Expanding search topics...")
@@ -318,7 +357,8 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
             "search_results": web_search_results,
             "processing_time": datetime.now().timestamp(),
             "search_depth": search_depth,
-            "report_style": report_style
+            "report_style": report_style,
+            "use_llm_analysis": use_llm_analysis
         }
         
         # Display results
@@ -498,6 +538,11 @@ def _display_results(report_data: Dict[str, Any]):
     # Grammar analysis display
     if report_data.get('grammar_analysis'):
         st.subheader("🔍 Grammar Analysis")
+        
+        # Show analysis method used
+        analysis_method = "🤖 LLM-based" if report_data.get('use_llm_analysis') else "📋 Rule-based"
+        st.info(f"Analysis method: {analysis_method}")
+        
         grammar_analysis = report_data['grammar_analysis']
         
         col1, col2 = st.columns(2)
@@ -517,6 +562,10 @@ def _display_results(report_data: Dict[str, Any]):
             st.write("**関連文法項目:**")
             for topic in grammar_analysis['related_topics']:
                 st.write(f"- {topic}")
+        
+        # Show error if any
+        if grammar_analysis.get('error'):
+            st.warning(f"⚠️ Analysis warning: {grammar_analysis['error']}")
     
     # Related topics display
     if report_data.get('related_topics'):

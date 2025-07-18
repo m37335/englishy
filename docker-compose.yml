@@ -11,5 +11,6 @@ services:
       - ./data:/app/data
       - ./cache:/app/cache
       - ./tests:/app/tests
+      - ./src:/app/src
     env_file:
       - .env 
