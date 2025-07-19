@@ -212,19 +212,52 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         if refinement_result.get("translation") and refinement_result["translation"] != query:
             st.info(f"英語翻訳: {refinement_result['translation']}")
         
-        # Step 2: Web search
-        status_text.text("Step 2/7: Searching for resources...")
+        # Step 2: Query expansion (before web search for better search optimization)
+        status_text.text("Step 2/7: Expanding search topics for optimized web search...")
         progress_bar.progress(30)
+        
+        # Expand query to generate optimized search topics
+        expanded_result = query_expander(
+            query=refined_query,
+            web_search_results=""  # No web search results yet
+        )
+        
+        st.info(f"Generated {len(expanded_result.topics)} search topics for web search")
+        if expanded_result.topics:
+            st.info(f"Search topics: {', '.join(expanded_result.topics[:5])}{'...' if len(expanded_result.topics) > 5 else ''}")
+        
+        # Step 3: Web search with expanded topics
+        status_text.text("Step 3/7: Searching for resources with expanded topics...")
+        progress_bar.progress(45)
         
         web_search_results = []
         if include_web_search:
             web_search = load_web_retriever("DuckDuckGo")
-            # 検索結果を12件に増やす（要求された10件程度）
-            web_search_results = web_search.search(refined_query, k=12)
+            
+            # Search with refined query and expanded topics
+            all_search_queries = [refined_query] + expanded_result.topics[:3]  # Use top 3 topics
+            for i, search_query in enumerate(all_search_queries):
+                try:
+                    results = web_search.search(search_query, k=4)  # 4 results per query
+                    web_search_results.extend(results)
+                    st.info(f"Search {i+1}: Found {len(results)} results for '{search_query}'")
+                except Exception as e:
+                    logger.warning(f"Search failed for query '{search_query}': {e}")
+            
+            # Remove duplicates and limit to 12 results
+            seen_urls = set()
+            unique_results = []
+            for result in web_search_results:
+                if result.get('url') not in seen_urls and len(unique_results) < 12:
+                    unique_results.append(result)
+                    seen_urls.add(result.get('url'))
+            web_search_results = unique_results
+            
+            st.info(f"Total unique search results: {len(web_search_results)}")
         
-        # Step 3: Grammar analysis
-        status_text.text("Step 3/7: Analyzing grammar structures...")
-        progress_bar.progress(45)
+        # Step 4: Grammar analysis of search results
+        status_text.text("Step 4/7: Analyzing grammar structures in search results...")
+        progress_bar.progress(55)
         
         # Choose grammar analyzer based on user preference
         if use_llm_analysis:
@@ -258,24 +291,6 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         
         if grammar_analysis.get('error'):
             st.warning(f"⚠️ Grammar analysis warning: {grammar_analysis['error']}")
-        
-        # Step 4: Query expansion
-        status_text.text("Step 4/7: Expanding search topics...")
-        progress_bar.progress(55)
-        
-        # Prepare web search results for expansion
-        web_results_text = ""
-        for i, result in enumerate(web_search_results):
-            web_results_text += f"Result {i+1}:\n"
-            web_results_text += f"Title: {result.get('title', '')}\n"
-            web_results_text += f"URL: {result.get('url', '')}\n"
-            web_results_text += f"Content: {result.get('snippet', '')}\n\n"
-        
-        # Expand query based on search results
-        expanded_result = query_expander(
-            query=refined_query,
-            web_search_results=web_results_text
-        )
         
         # Step 5: Outline creation
         status_text.text("Step 5/7: Creating report outline...")
@@ -385,11 +400,23 @@ async def _generate_report_with_integration(query: str, outline, references: Lis
         sections_content = ""
         for section_outline in outline.section_outlines:
             section_content = ""
+            
+            # セクション内のサブセクションからキーワードを収集
+            section_keywords = []
+            for subsection in section_outline.subsection_outlines:
+                if hasattr(subsection, 'keywords') and subsection.keywords:
+                    section_keywords.extend(subsection.keywords)
+            
+            # 重複を除去してキーワード文字列を作成
+            unique_keywords = list(dict.fromkeys(section_keywords))
+            keywords_text = ", ".join(unique_keywords) if unique_keywords else ""
+            
             async for chunk in integrated_section_writer(
                 query=query,
                 references="\n".join([f"Title: {ref.get('title', '')}\nURL: {ref.get('url', '')}\nContent: {ref.get('snippet', '')}" for ref in references]),
                 section_outline=section_outline.to_text(),
-                related_topics=""  # Related topics will be integrated in the section content
+                related_topics="",  # Related topics will be integrated in the section content
+                keywords=keywords_text  # 新規追加: キーワードを渡す
             ):
                 section_content += chunk
             sections_content += section_content + "\n\n"

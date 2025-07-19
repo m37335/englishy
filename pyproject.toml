@@ -12,6 +12,7 @@ dependencies = [
     "duckduckgo-search>=7.4.4",
     "litellm>=1.0.0",
     "pytest>=7.0.0",
+    "loguru>=0.7.0",
 ]
 
 [dependency-groups]

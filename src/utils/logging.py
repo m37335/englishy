@@ -2,13 +2,22 @@
 Logging utilities for Englishy.
 """
 
-from loguru import logger
+import logging
+import os
+from datetime import datetime
 
-# Configure loguru logger
-logger.add(
-    "logs/englishy.log",
-    rotation="1 day",
-    retention="7 days",
-    level="INFO",
-    format="{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}"
-) 
+# Create logs directory if it doesn't exist
+os.makedirs("logs", exist_ok=True)
+
+# Configure standard logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(name)s:%(funcName)s:%(lineno)d | %(message)s',
+    handlers=[
+        logging.FileHandler("logs/englishy.log"),
+        logging.StreamHandler()
+    ]
+)
+
+# Create logger instance
+logger = logging.getLogger("englishy") 

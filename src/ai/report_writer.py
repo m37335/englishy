@@ -85,6 +85,9 @@ class WriteSectionJapanese(dspy.Signature):
     """あなたは日本の英語教育に精通し、客観的なデータと英語教育理論に基づいた分かりやすい解説を書くことに定評のある信頼できるライターです。
 下記のクエリー（高校入試や教科書からの英文を含む可能性があります）に関するレポートのアウトラインに基づき、各章の本文を執筆してください。
 アウトラインの中にある引用番号は漏れることなく必ず参照し、収集された情報源の内容を適切に解釈しながら、各節ごとに400字以上で解説を記載してください。
+
+**重要**: キーワードを重点的に活用してください。各キーワードに関連する具体的な内容を含め、キーワード間の関連性を明示してください。実践的な例や練習問題を含めて、学習者の理解を深めてください。
+
 解説は緻密かつ包括的で、情報源に基づいたものであることが望ましいです。特に、入力された英文がある場合は、その英文の具体的な分析（文法、語彙、構文、読解ポイントなど）を詳細に含めてください。中学生・高校生が理解しやすい内容を重視し、実践的な学習内容を含めてください。必要に応じて、関連する英語教育理論、歴史的背景、国内外の事例、最新の統計データなどを盛り込んでください。
 なお、内容の信頼性が重要なので、必ず情報源にあたり、下記指示にあるように引用をするのを忘れないで下さい。
 
@@ -112,11 +115,13 @@ class WriteSectionJapanese(dspy.Signature):
 5. 日本語の「ですます調」で解説を書いてください。
 6. 出力は必要な英文以外は日本語にすることを厳守すること。
 7. 文法用語は必ず日本語で統一してください。
+8. **キーワード活用**: 提供されたキーワードを重点的に活用し、各キーワードに関連する具体的な内容を含めてください。
     """
 
     query = dspy.InputField(desc="Query", format=str)
     references = dspy.InputField(desc="Collected information sources and citation numbers", format=str)
     section_outline = dspy.InputField(desc="Section outline", format=str)
+    keywords = dspy.InputField(desc="Keywords to focus on", format=str)
     section = dspy.OutputField(desc="Generated section", format=str)
 
 
@@ -314,9 +319,13 @@ class StreamSectionWriter(StreamLineWriter):
     def __init__(self, lm=None) -> None:
         super().__init__(lm=lm, signature_cls=WriteSectionJapanese)
 
-    async def __call__(self, query: str, references: str, section_outline: str) -> AsyncGenerator[str, None]:
+    async def __call__(self, query: str, references: str, section_outline: str, keywords: str = "") -> AsyncGenerator[str, None]:
+        # キーワードが提供されていない場合は空文字列を使用
+        if not keywords:
+            keywords = ""
+        
         async for chunk in self.generate(
-            {"query": query, "references": references, "section_outline": section_outline}
+            {"query": query, "references": references, "section_outline": section_outline, "keywords": keywords}
         ):
             yield chunk
         section_content = self.get_generated_text()
@@ -383,7 +392,7 @@ class StreamIntegratedSectionWriter(StreamLineWriter):
         super().__init__(lm=lm, signature_cls=WriteIntegratedSection)
         self.grammar_analyzer = get_grammar_analyzer()
 
-    async def __call__(self, query: str, references: str, section_outline: str, related_topics: str) -> AsyncGenerator[str, None]:
+    async def __call__(self, query: str, references: str, section_outline: str, related_topics: str, keywords: str = "") -> AsyncGenerator[str, None]:
         # セクション内容から文法構造を解析
         analysis = self.grammar_analyzer.analyze_text(section_outline + " " + related_topics)
         
@@ -404,6 +413,10 @@ class StreamIntegratedSectionWriter(StreamLineWriter):
         enhanced_related_topics = related_topics
         if grammar_analysis:
             enhanced_related_topics += grammar_analysis
+        
+        # キーワード情報を追加
+        if keywords:
+            enhanced_related_topics += f"\n\n### 重点キーワード\n{keywords}"
         
         async for chunk in self.generate({
             "query": query, 

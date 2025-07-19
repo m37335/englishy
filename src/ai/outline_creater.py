@@ -7,6 +7,56 @@ from pydantic import BaseModel
 from src.utils.logging import logger
 
 
+def extract_keywords_from_content(content: str) -> list[str]:
+    """コンテンツからキーワードを抽出する"""
+    keywords = []
+    
+    # 文法関連キーワード
+    grammar_keywords = [
+        "gerund", "infinitive", "participle", "subjunctive", "modal verb",
+        "relative pronoun", "passive voice", "active voice", "present perfect",
+        "past perfect", "future perfect", "conditional", "imperative", "interrogative",
+        "動名詞", "不定詞", "分詞", "仮定法", "助動詞", "関係代名詞", "受動態", "能動態",
+        "現在完了形", "過去完了形", "未来完了形", "条件法", "命令法", "疑問文"
+    ]
+    
+    # 教育関連キーワード
+    education_keywords = [
+        "teaching", "learning", "education", "student", "practice", "exercise",
+        "method", "approach", "technique", "strategy", "difficulty", "mistake",
+        "指導", "学習", "教育", "生徒", "練習", "演習", "方法", "アプローチ",
+        "テクニック", "戦略", "困難", "間違い", "理解", "応用"
+    ]
+    
+    # コンテンツからキーワードを検索
+    content_lower = content.lower()
+    for keyword in grammar_keywords + education_keywords:
+        if keyword.lower() in content_lower:
+            keywords.append(keyword)
+    
+    # 重複を除去して上位10個まで返す
+    unique_keywords = list(dict.fromkeys(keywords))[:10]
+    return unique_keywords
+
+
+def extract_keywords_from_references(references: list[dict], subsection_reference_ids: list[int]) -> list[str]:
+    """参照情報からサブセクション用のキーワードを抽出"""
+    keywords = []
+    
+    for ref in references:
+        # サブセクションの引用番号と一致するかチェック
+        ref_id = ref.get('id', 0)
+        if ref_id in subsection_reference_ids:
+            # タイトルとスニペットからキーワード抽出
+            content = f"{ref.get('title', '')} {ref.get('snippet', '')}"
+            ref_keywords = extract_keywords_from_content(content)
+            keywords.extend(ref_keywords)
+    
+    # 重複を除去して上位5個まで返す
+    unique_keywords = list(dict.fromkeys(keywords))[:5]
+    return unique_keywords
+
+
 class CreateOutline(dspy.Signature):
     """あなたは、中学生・高校生の英語学習をサポートする英語教育の専門家です。最新の英語教育研究や学習法を常にフォローし、生徒が理解しやすい解説を心がけています。収集された情報源をもとに、下記のクエリーに対する分かりやすい解説レポートのアウトラインと簡潔なタイトルを作成してください。結論パートは作成しないでください。
 
@@ -215,11 +265,15 @@ class FixOutline(dspy.Signature):
 class SubsectionOutline(BaseModel):
     title: str
     reference_ids: list[int]
+    keywords: list[str] = []  # 新規追加: キーワードリスト
 
     def to_text(self) -> str:
-        return "\n".join(
-            ["### " + self.title, "".join([f"[{reference_id}]" for reference_id in self.reference_ids])]
-        ).strip()
+        text = f"### {self.title}\n"
+        if self.reference_ids:
+            text += f"[{']['.join(map(str, self.reference_ids))}]\n"
+        if self.keywords:  # 新規追加: キーワード表示
+            text += f"**キーワード**: [{', '.join(self.keywords)}]\n"
+        return text
 
 
 class SectionOutline(BaseModel):
@@ -315,4 +369,17 @@ class OutlineCreater(dspy.Module):
             fix_outline_result = self.fix_outline(outline=create_outline_result.outline)
             logger.info(f"fixed outline: \n{fix_outline_result.fixed_outline}")
             parsed_outline = self.__parse_outline(fix_outline_result.fixed_outline)
-        return dspy.Prediction(outline=parsed_outline) 
+            
+            # 新規追加: キーワード抽出
+            if references and isinstance(references[0], dict):
+                self._add_keywords_to_outline(parsed_outline, references)
+                logger.info("Keywords extracted and added to outline")
+        
+        return dspy.Prediction(outline=parsed_outline)
+    
+    def _add_keywords_to_outline(self, outline: Outline, references: list[dict]) -> None:
+        """アウトラインの各サブセクションにキーワードを追加"""
+        for section in outline.section_outlines:
+            for subsection in section.subsection_outlines:
+                keywords = extract_keywords_from_references(references, subsection)
+                subsection.keywords = keywords 

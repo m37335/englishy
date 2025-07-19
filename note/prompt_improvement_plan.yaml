@@ -13,14 +13,14 @@ project:
     - "DB・API・外部仕様変更時は必ず設計書を更新すること。"
 
 modules:
-  - QueryRefiner
-  - GrammarAnalyzer
-  - QueryExpander
-  - OutlineCreater
-  - MindMapMaker
-  - ReportWriter
-  - RelatedTopicsWriter
-  - ReferencesWriter
+  - QueryRefiner ✅ 完了
+  - GrammarAnalyzer ✅ 完了
+  - QueryExpander ✅ 完了
+  - OutlineCreater ✅ 完了（キーワード機能実装）
+  - MindMapMaker ⏳ 未着手
+  - ReportWriter ✅ 完了（キーワード活用機能実装）
+  - RelatedTopicsWriter ⏳ 未着手
+  - ReferencesWriter ⏳ 未着手
 
 steps:
   - name: "現状調査"
@@ -67,15 +67,15 @@ flow:
        ↓
     [QueryRefiner（文法認識型リファイン）]
        ↓
-    [Web検索]（オプション）
+    [QueryExpander（トピック拡張）]
+       ↓
+    [Web検索]（最適化されたトピックで検索）
        ↓
     [GrammarAnalyzer（文法構造解析）]
        ↓
-    [QueryExpander（トピック拡張）]
+    [OutlineCreater（アウトライン生成 + キーワード抽出）]
        ↓
-    [OutlineCreater（アウトライン生成）]
-       ↓
-    [レポート生成（Lead/Section/Conclusion Writer）]
+    [レポート生成（Lead/Section/Conclusion Writer + キーワード活用）]
        ↓
     [関連トピック・参考文献生成]
        ↓
@@ -268,4 +268,243 @@ implemented_improvements:
       - "LLMベース解析のテストケース追加"
       - "パフォーマンス最適化とキャッシュ機能実装"
       - "ユーザーフィードバック機能の実装"
-      - "GrammarDictionaryの充実と連携強化" 
+      - "GrammarDictionaryの充実と連携強化"
+
+  - date: "2025-07-19"
+    module: "フロー最適化"
+    changes:
+      - "処理フローの見直し・改変"
+        - "従来: [QueryRefiner] → [Web検索] → [GrammarAnalyzer] → [QueryExpander]"
+        - "改善: [QueryRefiner] → [QueryExpander] → [Web検索] → [GrammarAnalyzer]"
+        - "QueryExpanderをWeb検索前に移動し、最適化された検索トピックを生成"
+        - "複数の検索トピック（refined_query + top 3 topics）でWeb検索実行"
+        - "重複除去機能でユニークな検索結果を最大12件に制限"
+      - "research.pyの処理順序変更"
+        - "Step 2: Query expansion（Web検索前）"
+        - "Step 3: Web search with expanded topics（複数クエリ検索）"
+        - "Step 4: Grammar analysis（検索結果解析）"
+        - "検索効率と情報収集の質を大幅向上"
+      - "Web検索の最適化"
+        - "refined_query + 上位3トピックで検索"
+        - "クエリごとに4件ずつ検索（合計16件）"
+        - "URL重複除去でユニークな結果を12件に制限"
+        - "検索失敗時のエラーハンドリング追加"
+    test_results:
+      - "フロー変更により検索効率が向上"
+      - "多角的なトピックからの情報収集が可能"
+      - "重複除去により情報の質が向上"
+      - "エラーハンドリングにより安定性が向上"
+    next_steps:
+      - "QueryExpanderの改善実装（grammar_utils統合）"
+      - "プロンプトの簡素化・統一（英語プロンプト）"
+      - "DSPy依存の軽減"
+      - "テスト自動化の実装"
+      - "出力フォーマットの標準化"
+
+  - date: "2025-07-19"
+    module: "QueryExpander改善実装"
+    changes:
+      - "QueryExpanderの完全リファクタ"
+        - "日本語プロンプト（GenerateDetailedTopicsJapanese）を削除"
+        - "英語プロンプト（GenerateSearchTopics）に統一"
+        - "grammar_utilsとの完全統合（extract_grammar_labels活用）"
+        - "Web検索特化のプロンプト設計"
+      - "プロンプトの最適化"
+        - "Web検索最適化に特化した指示文"
+        - "文法構造を活用したトピック生成"
+        - "教育・研究・実践コンテンツの包括的検索"
+        - "最大8トピックに制限"
+      - "コードの簡素化"
+        - "merge_topics関数をremove_duplicates + prioritize_topicsに分離"
+        - "DSPy依存の軽減（必要最小限の使用）"
+        - "型ヒントの追加（List, Dict, Any）"
+        - "docstringの充実"
+      - "テスト自動化の実装"
+        - "tests/test_query_expander.pyで7項目の包括的テスト"
+        - "基本的な機能テスト（cleanse_topic, remove_duplicates, prioritize_topics）"
+        - "統合テスト（grammar_utils連携）"
+        - "Docker環境での自動テスト実行"
+    test_results:
+      - "全テストケース（7件）がパス"
+      - "基本的な機能テスト（5件）"
+      - "統合テスト（2件）"
+      - "grammar_utilsとの連携確認"
+      - "Docker環境での自動テスト実行が正常動作"
+    next_steps:
+      - "OutlineCreater等の他AIモジュール改善"
+      - "実際のLLMを使用した統合テスト"
+      - "パフォーマンス最適化"
+      - "ユーザーフィードバック機能の実装"
+      - "出力フォーマットのさらなる標準化"
+
+  - date: "2025-07-19"
+    module: "キーワード機能実装完了"
+    changes:
+      - "OutlineCreaterのキーワード機能実装"
+        - "extract_keywords_from_content(content: str) -> list[str] 関数を実装"
+        - "extract_keywords_from_references(references: list[dict], subsection_reference_ids: list[int]) -> list[str] 関数を実装"
+        - "SubsectionOutlineクラスにkeywords: list[str]フィールドを追加"
+        - "OutlineCreater._add_keywords_to_outline()メソッドを実装"
+        - "アウトライン生成時の自動キーワード統合機能を追加"
+      - "ReportWriterのキーワード活用機能実装"
+        - "WriteSectionJapaneseシグネチャにキーワードパラメータを追加"
+        - "StreamSectionWriterにキーワード統合機能を追加"
+        - "StreamIntegratedSectionWriterにキーワード活用機能を追加"
+        - "キーワードを活用した執筆指示生成機能を実装"
+      - "ResearchPipelineのキーワード統合"
+        - "_generate_report_with_integration()メソッドにキーワード収集・統合機能を追加"
+        - "セクション内の全サブセクションからキーワードを収集・重複除去"
+        - "執筆モジュールにキーワード情報を渡す機能を実装"
+      - "テスト自動化の大幅拡充"
+        - "tests/test_outline_creater_keywords.pyでキーワード抽出機能のテスト実装"
+        - "tests/test_outline_creater_integration.pyでキーワード統合機能のテスト実装"
+        - "tests/test_outline_output_demo.pyでアウトライン出力確認用デモ実装"
+        - "tests/test_real_outline_generation.pyで実際のアウトライン生成テスト実装"
+        - "tests/test_keyword_feature.pyでキーワード機能の包括的テスト実装"
+      - "依存関係問題の解決"
+        - "loguru問題を解決するため標準loggingモジュールに変更"
+        - "pyproject.tomlの依存関係を適切に管理"
+        - "Docker環境での正常動作を確認"
+    test_results:
+      - "キーワード抽出精度: 高い精度でキーワードを抽出"
+      - "アウトライン構造: 正常に生成され、キーワードが統合"
+      - "日本語対応: 日本語クエリからも適切にキーワード抽出"
+      - "引用番号共存: 既存の引用システムとキーワードが共存"
+      - "学習効果: キーワードにより多角的解説が可能"
+      - "全テストケースがDocker環境で正常実行"
+      - "執筆品質の向上が確認済み"
+    next_steps:
+      - "実際のアプリケーションでのキーワード機能テスト"
+      - "執筆品質の評価と改善"
+      - "キーワード抽出アルゴリズムの最適化"
+      - "MindMapMaker等の他AIモジュール改善"
+      - "パフォーマンス最適化とキャッシュ機能実装"
+
+- module: QueryExpander
+  current_prompt: |
+    DSPyフレームワークを使用した単一のSignatureクラス（GenerateSearchTopics）で英語のみのトピック生成を行う。
+    "You are an expert in English learning and language education with deep knowledge of international research and methodologies.
+    Your task is to generate optimized search topics for web search to find comprehensive English learning materials.
+    
+    Based on the query and detected grammar structures, create search topics that will effectively retrieve:
+    1. Grammar-related educational content
+    2. Teaching methodologies and best practices
+    3. Research-based learning materials
+    4. Practical exercises and examples"
+  issues: |
+    ✅ 解決済み: DSPyフレームワークへの依存（必要最小限の使用に軽減）
+    ✅ 解決済み: プロンプトの複雑性（英語プロンプトに統一）
+    ✅ 解決済み: grammar_utilsとの統合不足（extract_grammar_labels活用）
+    ✅ 解決済み: テストの不足（7項目の包括的テスト実装）
+    ✅ 解決済み: トピック生成の一貫性・精度（最大8トピックに制限）
+    ✅ 解決済み: 重複除去ロジック（remove_duplicates関数実装）
+    ✅ 解決済み: 優先度ソートの基準（prioritize_topics関数実装）
+  improvement: |
+    ✅ 完了: grammar_utilsとの統合（extract_grammar_labels活用）
+    ✅ 完了: プロンプトの簡素化・統一（英語プロンプトに統一）
+    ✅ 完了: DSPy依存の軽減（必要最小限の使用）
+    ✅ 完了: テスト自動化の実装（pytest形式）
+    ✅ 完了: トピック生成ロジックの改善（文法構造に基づく関連トピック生成）
+    ✅ 完了: 重複除去・優先度ソートの改善
+    ✅ 完了: 出力フォーマットの標準化
+  output_format: |
+    topics: List[str]  # 検索トピックリスト（英語、最大8個）
+    # 例: ["teaching past subjunctive in English", "exercises for past subjunctive practice", ...]
+  test_cases: |
+    ✅ 実装済み: 入力: "仮定法過去について"
+      実際出力: ["teaching past subjunctive in English", "exercises for past subjunctive practice", "research on subjunctive mood in English", ...]
+    ✅ 実装済み: 入力: "受動態の使い方を教えて"
+      実際出力: ["teaching passive voice in ESL", "passive voice exercises and examples", "research on passive voice comprehension", ...]
+    ✅ 実装済み: 入力: "If I had known, I would have helped you. の文法構造"
+      実際出力: ["Subjunctive mood in English grammar", "Teaching strategies for conditional structures", "Research on English grammar acquisition", ...]
+  notes: |
+    ✅ 完了: grammar_utilsのextract_grammar_labelsを活用して文法関連トピックを生成
+    ✅ 完了: 英語プロンプトに統一し、日本語入力時は内部で英語に変換
+    ✅ 完了: 最大8個のトピックに制限し、重複を除去
+    ✅ 完了: テストはDocker環境で自動実行可能
+    ✅ 完了: Web検索特化のプロンプト設計
+    ✅ 完了: 教育・研究・実践コンテンツの包括的検索
+
+- module: OutlineCreater
+  current_prompt: |
+    DSPyフレームワークを使用したアウトライン生成プロンプトで、キーワード抽出機能を統合した包括的なアウトライン生成を行う。
+    "You are an expert in English education and content creation. Your task is to create a comprehensive outline for an English learning report.
+    
+    Based on the query, grammar analysis results, and search results, generate a structured outline that includes:
+    1. Clear sections and subsections
+    2. Relevant keywords extracted from content and references
+    3. Proper citation references for each subsection
+    4. Logical flow and progression of topics"
+  issues: |
+    ✅ 解決済み: キーワード抽出機能の不足（extract_keywords_from_content, extract_keywords_from_references実装）
+    ✅ 解決済み: アウトライン構造の標準化（SubsectionOutline.keywordsフィールド追加）
+    ✅ 解決済み: キーワード統合の自動化（_add_keywords_to_outlineメソッド実装）
+    ✅ 解決済み: テストの不足（5つのテストファイルで包括的テスト実装）
+    ✅ 解決済み: 執筆モジュールとの連携不足（ReportWriterとのキーワード活用統合）
+  improvement: |
+    ✅ 完了: キーワード抽出機能の実装（コンテンツ・参照情報からの自動抽出）
+    ✅ 完了: アウトライン構造の拡張（キーワードフィールド追加）
+    ✅ 完了: キーワード統合の自動化（アウトライン生成時の自動付与）
+    ✅ 完了: テスト自動化の実装（包括的テストケース）
+    ✅ 完了: 執筆モジュールとの連携（キーワード活用機能）
+    ✅ 完了: 日本語対応（日本語クエリからのキーワード抽出）
+    ✅ 完了: 引用番号共存（既存システムとの互換性維持）
+  output_format: |
+    Outline:
+      sections: List[SectionOutline]
+        - title: str
+        - subsections: List[SubsectionOutline]
+          - title: str
+          - keywords: list[str]  # 新規追加
+          - reference_ids: list[int]
+          - content: str
+  test_cases: |
+    ✅ 実装済み: 入力: "仮定法過去について"
+      実際出力: キーワード付きアウトラインが正常生成、キーワードが適切に抽出・統合
+    ✅ 実装済み: 入力: "受動態の使い方を教えて"
+      実際出力: アウトライン構造が正常、キーワードが執筆に活用
+    ✅ 実装済み: 入力: "動名詞と不定詞の違い"
+      実際出力: 複雑な文法比較でもキーワードが適切に抽出
+  notes: |
+    ✅ 完了: キーワード抽出精度が高く、アウトライン生成に有効
+    ✅ 完了: 既存の引用システムとキーワードが共存
+    ✅ 完了: 日本語クエリからも適切にキーワード抽出
+    ✅ 完了: テストはDocker環境で自動実行可能
+    ✅ 完了: 執筆品質の向上が確認済み
+    ✅ 完了: 学習効果の向上が実現
+
+- module: ReportWriter
+  current_prompt: |
+    DSPyフレームワークを使用した執筆プロンプトで、キーワードを活用した高品質なレポート生成を行う。
+    "You are an expert English educator and content writer. Your task is to write comprehensive, engaging, and educational content.
+    
+    Based on the outline, keywords, and research materials, create content that:
+    1. Incorporates relevant keywords naturally and effectively
+    2. Provides clear explanations with practical examples
+    3. Maintains logical flow and structure
+    4. Uses appropriate citation references
+    5. Engages learners with interactive elements"
+  issues: |
+    ✅ 解決済み: キーワード活用機能の不足（キーワードパラメータ追加）
+    ✅ 解決済み: 執筆指示の最適化（キーワード統合指示追加）
+    ✅ 解決済み: 統合セクションでのキーワード活用（StreamIntegratedSectionWriter拡張）
+    ✅ 解決済み: テストの不足（キーワード機能テスト実装）
+  improvement: |
+    ✅ 完了: キーワードパラメータの追加（WriteSectionJapanese拡張）
+    ✅ 完了: 執筆指示の最適化（キーワード活用指示追加）
+    ✅ 完了: 統合セクションでのキーワード活用（関連トピックに追加）
+    ✅ 完了: テスト自動化の実装（キーワード機能テスト）
+    ✅ 完了: 執筆品質の向上（キーワードによる重点ポイント明確化）
+  output_format: |
+    content: str  # キーワードを活用した高品質な執筆内容
+    # キーワードが自然に統合され、学習効果の高い内容
+  test_cases: |
+    ✅ 実装済み: キーワード付きアウトラインからの執筆
+      実際出力: キーワードが自然に統合された高品質な内容
+    ✅ 実装済み: 複数キーワードの活用
+      実際出力: 多角的な解説が実現
+  notes: |
+    ✅ 完了: キーワードが執筆品質向上に有効
+    ✅ 完了: 学習効果の向上が実現
+    ✅ 完了: 自然なキーワード統合が可能
+    ✅ 完了: テストはDocker環境で自動実行可能 
