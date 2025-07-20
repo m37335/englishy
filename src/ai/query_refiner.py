@@ -28,9 +28,7 @@ class GrammarAwareQueryRefiner(dspy.Module):
         self.grammar_data = self._load_grammar_dictionary()
         self.grammar_analyzer = dspy.Predict(GrammarAnalysisSignature, lm=self.lm)
         
-        # Set LM globally for dspy if available
-        if lm is not None:
-            dspy.settings.configure(lm=lm)
+        # Remove global dspy.settings.configure call to avoid thread conflicts
         
     def _load_grammar_dictionary(self) -> Dict[str, Any]:
         """Load GrammarDictionary data from JSON file."""
@@ -46,38 +44,27 @@ class GrammarAwareQueryRefiner(dspy.Module):
             print(f"Error loading GrammarDictionary: {e}")
             return []
     
-    def forward(self, text: str) -> Dict[str, Any]:
-        """
-        Process query through grammar analysis, translation, and search query generation.
-        
-        Args:
-            text: User's input query (can be Japanese or English)
-            
-        Returns:
-            Dict containing:
-            - refined_query: Optimized English search query
-            - detected_grammar: List of detected grammar structures
-            - related_items: Related grammar items from dictionary
-            - original_query: Original input query
-            - translation: English translation if input was Japanese
-        """
-        
-        # Step 1: Grammar Analysis
-        grammar_analysis = self._analyze_grammar(text)
-        
-        # Step 2: Translation (if Japanese)
-        translation = self._translate_to_english(text) if self._is_japanese(text) else text
-        
-        # Step 3: Search Query Generation
-        search_query = self._generate_search_query(translation, grammar_analysis)
-        
-        return {
-            "refined_query": search_query,
-            "detected_grammar": grammar_analysis.get("grammar_structures", []),
-            "related_items": grammar_analysis.get("related_items", []),
-            "original_query": text,
-            "translation": translation
-        }
+    def forward(self, text: str) -> dspy.Prediction:
+        """Refine query using grammar-aware analysis."""
+        try:
+            # Use context manager instead of global configuration
+            with dspy.settings.context(lm=self.lm):
+                # Analyze grammar structures in the query
+                grammar_analysis = self.grammar_analyzer(text=text)
+                
+                # Extract grammar structures and create refined query
+                grammar_structures = grammar_analysis.get("grammar_structures", [])
+                grammar_text = ", ".join(grammar_structures) if grammar_structures else "general English"
+                
+                # Create refined query with grammar context
+                refined_query = f"{text} (grammar focus: {grammar_text})"
+                
+                return dspy.Prediction(refined_query=refined_query)
+                
+        except Exception as e:
+            print(f"Error in grammar-aware refinement: {e}")
+            # Fallback to simple return
+            return dspy.Prediction(refined_query=text)
     
     def _analyze_grammar(self, text: str) -> Dict[str, Any]:
         """Analyze grammar structures in the given text using LM and GrammarDictionary."""
@@ -175,7 +162,7 @@ class RefineQueryJapanese(dspy.Signature):
     """
     あなたは日本の英語教育に精通した優秀な英語教育者です。
     以下のユーザークエリに対して、Web検索や学術リソースから包括的な回答を得られる可能性が高い、簡潔なクエリを1つ作成してください。
-    中学生・高校生が理解しやすい内容を重視し、学習指導要領との整合性を考慮してください。
+    実践的な学習内容を重視し、学習指導要領との整合性を考慮してください。
     """
     query = dspy.InputField(desc="ユーザーのクエリ")
     refined_query = dspy.OutputField(desc="Web検索に最適化された改善されたクエリ")
@@ -187,15 +174,15 @@ class QueryRefiner:
         # Use the new GrammarAwareQueryRefiner internally
         self.grammar_aware_refiner = GrammarAwareQueryRefiner(lm)
         
-        # Set LM globally for dspy if available
-        if lm is not None:
-            dspy.settings.configure(lm=lm)
+        # Remove global dspy.settings.configure call to avoid thread conflicts
     
     def refine(self, query: str) -> str:
         """Refine query using grammar-aware analysis."""
         try:
-            result = self.grammar_aware_refiner(text=query)
-            return result["refined_query"]
+            # Use context manager instead of global configuration
+            with dspy.settings.context(lm=self.lm):
+                result = self.grammar_aware_refiner(text=query)
+                return result["refined_query"]
         except Exception as e:
             print(f"Error in grammar-aware refinement: {e}")
             # Fallback to simple return

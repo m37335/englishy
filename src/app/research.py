@@ -21,7 +21,7 @@ from src.ai.report_writer import (
     StreamLeadWriter, StreamSectionWriter, StreamConclusionWriter, 
     WriteLeadEnglish, WriteLeadJapanese, WriteSectionEnglish, WriteSectionJapanese,
     WriteConclusionEnglish, WriteConclusionJapanese, StreamRelatedTopicsWriter,
-    StreamReferencesWriter, StreamIntegratedSectionWriter
+    StreamReferencesWriter, StreamIntegratedSectionWriter, StreamInlineReferencesWriter
 )
 from src.ai.mindmap_maker import MindMapMaker
 from src.ai.grammar_analyzer import get_grammar_analyzer
@@ -85,7 +85,7 @@ def create_research_page():
             "Use LLM-based grammar analysis (Recommended)",
             value=True,
             help="Use advanced AI for more accurate grammar structure analysis"
-        )
+            )
         
         submitted = st.form_submit_button("🚀 Start Research")
         
@@ -140,7 +140,10 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         logger.info("Initializing LM...")
         lm = load_lm()
         
-        # Initialize AI modules with LM
+        # Remove dspy.settings.configure to avoid thread conflicts
+        # All modules will use dspy.settings.context instead
+        
+        # Initialize AI modules with LM (without individual dspy.settings.configure calls)
         logger.info("Initializing QueryRefiner...")
         query_refiner = QueryRefiner(lm=lm)
         
@@ -236,22 +239,36 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
             
             # Search with refined query and expanded topics
             all_search_queries = [refined_query] + expanded_result.topics[:3]  # Use top 3 topics
+            logger.info(f"Starting web search with {len(all_search_queries)} queries: {all_search_queries}")
+            
             for i, search_query in enumerate(all_search_queries):
                 try:
+                    logger.info(f"Search {i+1}: Searching for '{search_query}'")
                     results = web_search.search(search_query, k=4)  # 4 results per query
+                    logger.info(f"Search {i+1}: Raw results count: {len(results)}")
                     web_search_results.extend(results)
                     st.info(f"Search {i+1}: Found {len(results)} results for '{search_query}'")
                 except Exception as e:
                     logger.warning(f"Search failed for query '{search_query}': {e}")
+                    import traceback
+                    logger.warning(f"Search traceback: {traceback.format_exc()}")
+            
+            logger.info(f"Before deduplication: {len(web_search_results)} total results")
             
             # Remove duplicates and limit to 12 results
             seen_urls = set()
             unique_results = []
             for result in web_search_results:
-                if result.get('url') not in seen_urls and len(unique_results) < 12:
+                url = result.get('url', '')
+                if url not in seen_urls and len(unique_results) < 12:
                     unique_results.append(result)
-                    seen_urls.add(result.get('url'))
+                    seen_urls.add(url)
+                    logger.info(f"Added unique result: {result.get('title', 'No title')} - {url}")
+                else:
+                    logger.info(f"Skipped duplicate result: {result.get('title', 'No title')} - {url}")
+            
             web_search_results = unique_results
+            logger.info(f"After deduplication: {len(web_search_results)} unique results")
             
             st.info(f"Total unique search results: {len(web_search_results)}")
         
@@ -343,6 +360,40 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
             logger.error(f"Error generating references: {e}")
             references_content = "参考文献の生成中にエラーが発生しました。"
         
+        # Step 7.6: Generate inline references and append to report
+        status_text.text("Step 7.6/7: Generating inline references...")
+        progress_bar.progress(92)
+        
+        # 本文に引用番号と対応した参考文献リストを追加
+        try:
+            inline_references_writer = StreamInlineReferencesWriter()
+            
+            inline_references_content = ""
+            async for chunk in inline_references_writer(
+                report_content=report,
+                search_results="\n".join([f"Title: {ref.get('title', '')}\nURL: {ref.get('url', '')}\nContent: {ref.get('snippet', '')}" for ref in web_search_results])
+            ):
+                inline_references_content += chunk
+            
+            # デバッグ: 生成されたインライン参考文献の内容をログ出力
+            logger.info(f"Generated inline references content: {inline_references_content}")
+            logger.info(f"Inline references content length: {len(inline_references_content)}")
+            
+            # 本文の最後に参考文献リストを追加
+            if inline_references_content.strip():
+                original_report_length = len(report)
+                report += f"\n\n{inline_references_content}"
+                logger.info(f"Inline references added to report. Original length: {original_report_length}, New length: {len(report)}")
+                logger.info(f"Added content: {inline_references_content}")
+            else:
+                logger.info("No inline references generated - content was empty")
+                
+        except Exception as e:
+            logger.error(f"Error generating inline references: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # エラーが発生してもレポート生成は継続
+        
         # Step 8: Mind map generation with related topics
         status_text.text("Step 8/8: Creating mind map with related topics...")
         progress_bar.progress(95)
@@ -350,11 +401,45 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         mindmap_content = ""
         if include_mindmap:
             try:
-                mindmap_result = mindmap_maker(report=report, related_topics=related_topics)
+                # アウトライン構造からキーワードを抽出
+                outline_keywords = []
+                if hasattr(outline_result, 'outline') and outline_result.outline:
+                    for section in outline_result.outline.section_outlines:
+                        for subsection in section.subsection_outlines:
+                            if hasattr(subsection, 'keywords') and subsection.keywords:
+                                outline_keywords.extend(subsection.keywords)
+                
+                # 重複を除去
+                unique_keywords = list(dict.fromkeys(outline_keywords))
+                
+                # デバッグ情報をログ出力
+                logger.info(f"Generating mindmap with {len(unique_keywords)} keywords")
+                logger.info(f"Report length: {len(report)} characters")
+                logger.info(f"Related topics length: {len(related_topics)} characters")
+                
+                mindmap_result = mindmap_maker(
+                    report=report,
+                    outline_structure=outline_result.outline,
+                    keywords=unique_keywords,
+                    related_topics=related_topics
+                )
                 mindmap_content = mindmap_result.mindmap
+                logger.info(f"Mindmap generated successfully with {len(unique_keywords)} keywords")
+                logger.info(f"Generated mindmap content length: {len(mindmap_content)} characters")
+                
+                # マインドマップ内容の検証
+                if not mindmap_content or mindmap_content.strip() == "":
+                    logger.warning("Generated mindmap content is empty")
+                    mindmap_content = "# マインドマップ\n## 内容\n### マインドマップの生成に失敗しました"
+                elif "#" not in mindmap_content:
+                    logger.warning("Generated mindmap content does not contain headers")
+                    mindmap_content = "# マインドマップ\n## 内容\n### マインドマップの形式が正しくありません"
+                    
             except Exception as e:
                 logger.error(f"Error generating mind map: {e}")
-                mindmap_content = "マインドマップの生成中にエラーが発生しました。"
+                import traceback
+                logger.error(f"Mindmap error traceback: {traceback.format_exc()}")
+                mindmap_content = "# マインドマップ\n## エラー\n### マインドマップの生成中にエラーが発生しました"
         
         # Complete
         progress_bar.progress(100)
