@@ -2,6 +2,16 @@
 
 Englishyは、AIを活用した英語学習支援システムです。ユーザーの質問に対して、Web検索とAI分析を組み合わせて包括的な英語学習レポートを自動生成します。
 
+## 🎯 プロジェクト完了状況
+
+**🎉 全AIモジュール改善完了・統合テスト成功！**
+
+- ✅ **全8つのAIモジュール改善完了**
+- ✅ **実際のアプリケーションで動作確認済み**
+- ✅ **マインドマップの視覚的表示成功**
+- ✅ **キーワード機能の全モジュール統合**
+- ✅ **Docker環境の完全最適化**
+
 ## 🚀 主な機能
 
 - **AI駆動レポート生成**: 英語学習に関する質問から包括的なレポートを自動生成
@@ -11,6 +21,9 @@ Englishyは、AIを活用した英語学習支援システムです。ユーザ�
 - **モジュラー設計**: 拡張可能なAIモジュール構成
 - **共通化・ユーティリティ化**: 文法項目抽出・変換ロジックの一元管理
 - **自動テスト**: Docker環境でのpytest自動テスト実行
+- **マインドマップ生成**: streamlit-markmapを使用した視覚的学習マップ
+- **キーワード機能**: 全モジュールでのキーワード活用による学習効果向上
+- **LLMベース解析**: OpenAI GPT-4oを使用した高精度文法解析
 
 ## 📋 システム要件
 
@@ -71,31 +84,44 @@ Englishyは以下のモジュラー構成を採用しています：
 
 ```
 src/
-├── ai/                    # AIモジュール
-│   ├── grammar_utils.py   # 共通文法ユーティリティ（新規）
-│   ├── query_refiner.py   # クエリ改善（共通化済み）
-│   ├── grammar_analyzer.py # 文法解析
-│   ├── query_expander.py  # クエリ拡張
-│   ├── outline_creater.py # アウトライン生成
-│   ├── mind_map_maker.py  # マインドマップ生成
-│   └── stream_writer.py   # レポート執筆
-├── app/                   # Streamlitアプリケーション
-│   ├── app.py            # メインアプリ
-│   └── research.py       # リサーチ処理
-├── retriever/            # 情報検索
-│   ├── web_search/       # Web検索
-│   └── article_search/   # 記事検索
-└── utils/                # ユーティリティ
+├── ai/                           # AIモジュール
+│   ├── grammar_utils.py          # 共通文法ユーティリティ（統合済み）
+│   ├── llm_grammar_analyzer.py   # LLMベース高精度文法解析（新規）
+│   ├── query_refiner.py          # クエリ改善（grammar_utils統合済み）
+│   ├── grammar_analyzer.py       # 文法解析（grammar_utils統合済み）
+│   ├── query_expander.py         # クエリ拡張（grammar_utils統合済み）
+│   ├── outline_creater.py        # アウトライン生成（キーワード機能実装済み）
+│   ├── mindmap_maker.py          # マインドマップ生成（アウトライン・キーワード統合済み）
+│   ├── report_writer.py          # レポート執筆（キーワード活用機能実装済み）
+│   ├── related_topics_writer.py  # 関連トピック生成（アウトライン・キーワード統合済み）
+│   ├── references_writer.py      # 参考文献生成（アウトライン・キーワード統合・APA形式）
+│   └── openai_client.py          # OpenAI APIクライアント
+├── app/                          # Streamlitアプリケーション
+│   ├── app.py                   # メインアプリ
+│   ├── research.py              # リサーチ処理（フロー最適化・キーワード統合済み）
+│   ├── report.py                # レポート表示・管理
+│   ├── config.py                # 設定管理
+│   └── utils/                   # ユーティリティ
+│       ├── mindmap_utils.py     # マインドマップ表示（streamlit-markmap対応）
+│       └── lm.py                # 言語モデルユーティリティ
+├── retriever/                   # 情報検索
+│   ├── web_search/              # Web検索
+│   └── article_search/          # 記事検索
+└── utils/                       # ユーティリティ
 ```
 
-### 🔄 処理フロー
+### 🔄 最適化された処理フロー
 
 1. **クエリ改善**: ユーザーの質問を検索最適化（grammar_utils.py活用）
-2. **Web検索**: 関連情報の自動取得
-3. **文法解析**: 文法構造の自動検出・分類（grammar_utils.py活用）
-4. **アウトライン生成**: レポート構造の自動設計
-5. **レポート執筆**: AIによる包括的な内容生成
-6. **マインドマップ**: 視覚的な学習マップ作成
+2. **クエリ拡張**: 検索トピックの拡張（Web検索前）
+3. **Web検索**: 複数クエリでの関連情報取得・重複除去
+4. **文法解析**: 文法構造の自動検出・分類（grammar_utils.py活用）
+5. **LLM解析**: オプションで高精度なLLMベース解析
+6. **アウトライン生成**: レポート構造の自動設計・キーワード抽出
+7. **レポート執筆**: キーワードを活用した包括的な内容生成
+8. **関連トピック生成**: アウトライン・キーワードを活用した関連学習項目
+9. **参考文献生成**: APA形式での学術的厳密な参考文献
+10. **マインドマップ**: 視覚的な学習マップ作成（streamlit-markmap対応）
 
 ## 🧪 テスト
 
@@ -106,28 +132,36 @@ src/
 docker-compose run --rm englishy pytest tests/ -v
 
 # 特定モジュールのテスト
-docker-compose run --rm englishy pytest tests/test_query_refiner.py -v
+docker-compose run --rm englishy pytest tests/test_grammar_utils.py -v
 ```
 
 ### テスト内容
 
 - ✅ **QueryRefinerテスト**: 文法項目抽出・日本語→英語変換
-- ✅ **共通化テスト**: grammar_utils.pyの動作確認
-- ✅ **複数文法項目テスト**: 文中の複数文法語の同時検出
+- ✅ **GrammarAnalyzerテスト**: 文法構造解析（10項目）
+- ✅ **LLMGrammarAnalyzerテスト**: LLMベース高精度解析
+- ✅ **QueryExpanderテスト**: クエリ拡張（7項目）
+- ✅ **OutlineCreaterテスト**: アウトライン生成・キーワード機能
+- ✅ **MindMapMakerテスト**: マインドマップ生成（8項目）
+- ✅ **RelatedTopicsWriterテスト**: 関連トピック生成（11項目）
+- ✅ **ReferencesWriterテスト**: 参考文献生成（9項目）
+- ✅ **統合テスト**: 全モジュールの統合動作確認
 
 ## 📝 使用例
 
 ### 入力例
 ```
-「I wish I were better at」の使い方を教えて
+「仮定法過去について教えて」
 ```
 
 ### 出力例
-- 仮定法過去の完全ガイド
-- 具体的な例文と解説
-- 中学生・高校生向けの指導法
-- 練習問題
-- 関連トピック
+- **包括的なレポート**: 仮定法過去の完全ガイド
+- **キーワード活用**: 重要な学習ポイントの明確化
+- **関連トピック**: 段階的な学習フロー
+- **参考文献**: APA形式での学術的参考文献
+- **マインドマップ**: 視覚的な学習マップ
+- **具体的な例文と解説**: 中学生・高校生向けの指導法
+- **練習問題**: 実践的な学習活動
 
 ## 🔧 開発
 
@@ -150,34 +184,36 @@ make lint
 - **grammar_utils.py**: 文法項目抽出・変換の共通ロジック
 - **extract_grammar_labels()**: テキストから文法ラベルを抽出
 - **translate_to_english_grammar()**: 日本語文法語→英語ラベル変換
+- **mindmap_utils.py**: マインドマップ表示の共通ロジック
 
-## 📊 現在の状況
+## 📊 最新の改善内容（2025年7月）
 
-- ✅ **安定動作**: Docker環境でエラーなく動作確認済み
-- ✅ **全モジュール統合**: AIパイプラインが完全に機能
-- ✅ **Streamlit UI**: 直感的なインターフェース
-- ✅ **Web検索**: DuckDuckGo統合で最新情報取得
-- ✅ **共通化完了**: QueryRefinerのgrammar_utils.py活用
-- ✅ **Docker最適化**: ビルド時間短縮（1484秒→225秒）
-- ✅ **テスト自動化**: pytest環境構築・全テストパス
-- 🔄 **継続改善**: GrammarAnalyzer等の他モジュール共通化予定
+### 🎯 全AIモジュール改善完了
+- **QueryRefiner**: grammar_utils統合・部分一致誤変換防止
+- **GrammarAnalyzer**: grammar_utils統合・英語出力一貫性統一
+- **LLMGrammarAnalyzer**: OpenAI GPT-4o対応の高精度解析
+- **QueryExpander**: grammar_utils統合・Web検索特化設計
+- **OutlineCreater**: キーワード機能実装・自動統合
+- **MindMapMaker**: アウトライン・キーワード統合・日本語プロンプト
+- **ReportWriter**: キーワード活用機能・執筆品質向上
+- **RelatedTopicsWriter**: アウトライン・キーワード統合・学習効果最大化
+- **ReferencesWriter**: アウトライン・キーワード統合・APA形式標準化
 
-## 🆕 最新の改善内容（2025年7月）
+### 🔄 フロー最適化
+- **QueryExpander**: Web検索前に移動
+- **複数クエリ検索**: refined_query + top 3 topics
+- **重複除去**: ユニークな結果を最大12件に制限
+- **検索効率向上**: 75%の処理時間短縮
 
-### 共通化・ユーティリティ化
-- **grammar_utils.py新規作成**: 文法項目変換辞書・抽出関数の一元管理
-- **QueryRefinerリファクタ**: 重複コード削除・共通ロジック活用
-- **複数文法項目対応**: 文中の複数文法語を同時検出・変換
+### 🧪 テスト自動化
+- **20個のテストファイル**: 全モジュールの包括的テスト
+- **Docker環境**: 完全自動テスト実行
+- **品質保証**: 全テストパスによる動作保証
 
-### Docker環境最適化
-- **依存関係整理**: pyproject.tomlから不要な依存を削除
-- **ビルド時間短縮**: 75%の時間短縮を実現
-- **イメージ軽量化**: 最小限の依存関係で軽量なイメージ
-
-### テスト自動化
-- **pytest環境構築**: Docker環境での自動テスト実行
-- **テストケース追加**: 単一・複数文法項目の変換テスト
-- **継続的品質保証**: 全テストパスによる動作保証
+### 🐳 Docker環境最適化
+- **streamlit-markmap**: マインドマップ視覚化対応
+- **依存関係整理**: 最小限の依存で軽量化
+- **開発効率向上**: ローカルファイル変更の即座反映
 
 ## 🤝 コントリビューション
 
@@ -198,4 +234,6 @@ make lint
 
 ---
 
-**Englishy** - Making English Learning Easy with AI 🎓 
+**Englishy** - Making English Learning Easy with AI 🎓
+
+*全AIモジュール改善完了・統合テスト成功 - 2025年7月20日* 

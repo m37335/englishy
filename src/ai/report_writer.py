@@ -126,80 +126,117 @@ class WriteSectionJapanese(dspy.Signature):
 
 
 class WriteRelatedTopics(dspy.Signature):
-    """あなたは英文法に精通した専門家です。
-下記の英文を分析し、含まれる主要な文法項目を特定してください。
-特定した各文法項目について、以下の形式で簡潔に解説してください。
+    """あなたは英語学習教材の専門家で、学習効果を最大化する関連トピックを生成する信頼できるライターです。
+    与えられたクエリー、アウトライン構造、キーワード、文法解析結果を基に、学習者が理解を深めるための関連トピックを生成してください。
+    
+    **重要**: 関連トピックは必ず日本語で作成し、文法用語も日本語に統一してください（例：gerund→動名詞、infinitive→不定詞、subjunctive→仮定法など）。
+    
+    関連トピックの生成方針：
+    1. **学習の流れに沿った関連性**: アウトライン構造を考慮し、学習の自然な流れに沿った関連トピック
+    2. **キーワードとの連携**: 提供されたキーワードを活用し、重点的に学習すべき関連トピック
+    3. **文法解析結果の活用**: 既存の文法解析結果を基に、より深い理解を促進する関連トピック
+    4. **実践的な学習効果**: 実際の学習に役立つ、実践的な関連トピック
+    5. **段階的な学習**: 基礎から応用まで、段階的に学習できる関連トピック
+    
+    出力フォーマット：
+    ## 関連学習トピック
+    
+    ### 基礎文法項目
+    - **[文法項目名]**: [その文法項目の簡潔な説明]。学習のポイント: [学習時の注意点]
+    
+    ### 発展学習項目
+    - **[発展項目名]**: [発展項目の説明]。関連性: [メイントピックとの関連]
+    
+    ### 実践応用項目
+    - **[実践項目名]**: [実践項目の説明]。活用場面: [実際の使用場面]
+    
+    ### 学習のポイント
+    - [学習効果を高めるための具体的なアドバイス]
+    - [よくある間違いと対策]
+    - [効果的な練習方法]
+    
+    生成時の注意点：
+    - アウトライン構造の各セクションに関連するトピックを生成
+    - キーワードを重点的に活用し、学習効果を最大化
+    - 文法解析結果を基に、より正確で包括的な関連トピック
+    - 中学生・高校生が理解しやすいレベルで説明
+    - 実践的な学習に役立つ内容を重視
+    - 段階的な学習フローに沿った構成
+    """  # noqa: E501
 
-出力フォーマット：
-- **[文法項目名]**: [その文法項目の簡潔な説明]。例: [提供された英文からの該当箇所]
-
-例:
-- **現在完了進行形**: 過去のある時点から現在まで継続している動作を表します。例: "We have been discussing it since last week."
-- **関係代名詞**: 名詞を修飾する節を導きます。例: "It's a song about friendship." (ここでは関係代名詞が省略されているが、概念として関連する)
-
-検索トピックをリストアップするにあたり、以下の条件を遵守してください。
-- 英文に含まれる主要な文法項目を網羅的に特定すること。
-- 各文法項目の説明は、中学生・高校生が理解できるレベルで簡潔に記述すること。
-- 提供された英文中の具体的な箇所を例として引用し、解説と関連付けること。
-- 文法項目は、一般的な文法分類に従うこと。
-- 箇条書き形式で出力すること。
-- 出力は必要な英文以外は日本語にすることを厳守すること。
-    """
-
-    query = dspy.InputField(desc="Query", format=str)
-    related_topics = dspy.OutputField(desc="Related grammar topics", format=str)
+    query = dspy.InputField(desc="クエリー", format=str)
+    outline_structure = dspy.InputField(desc="アウトライン構造", format=str)
+    keywords = dspy.InputField(desc="重要なキーワード", format=str)
+    grammar_analysis = dspy.InputField(desc="文法解析結果", format=str)
+    related_topics = dspy.OutputField(desc="学習効果を最大化する関連トピック", format=str)
 
 
 class WriteReferences(dspy.Signature):
-    """あなたは英語教育の専門家で、参考文献の整理に精通しています。
-レポートで使用された情報源を基に、信頼性を最重視した厳選された参考文献リストを生成してください。
+    """あなたは英語教育の専門家で、学術的厳密性と学習効果を両立する参考文献の整理に精通しています。
+    与えられたクエリー、レポート内容、検索結果、アウトライン構造、キーワードを基に、信頼性を最重視しつつ学習効果を最大化する厳選された参考文献リストを生成してください。
+    
+    **重要**: 参考文献は必ず日本語で作成し、統一された引用形式（APA形式）を使用してください。
+    
+    参考文献生成の方針：
+    1. **学術的厳密性**: 査読済み論文、学術誌、権威ある教育機関の出版物を最優先
+    2. **学習効果の最大化**: 学習者にとって理解しやすく、実践に役立つ情報源を選択
+    3. **アウトライン構造との連携**: 各セクションに関連する情報源を適切に整理
+    4. **キーワードとの関連性**: 重要なキーワードに関連する情報源を重点的に選択
+    5. **段階的な学習支援**: 基礎から応用まで、段階的に学習できる情報源の構成
+    
+    出力フォーマット（APA形式）：
+    ## 参考文献
+    
+    ### 学術文献・研究論文
+    1. 著者名, A. A., & 著者名, B. B. (出版年). 論文タイトル. *雑誌名*, *巻号*, ページ番号. DOI: [DOI番号]
+    2. 著者名, C. C. (出版年). 書籍タイトル. 出版社名.
+    
+    ### 公式ガイドライン・政策文書
+    1. 文部科学省. (年度). タイトル. 取得日時, https://www.mext.go.jp/...
+    2. 教育委員会. (年度). タイトル. 取得日時, https://www.city.xxx.lg.jp/...
+    
+    ### 信頼できる教育機関・組織のリソース
+    1. 機関名. (アクセス日). タイトル. 取得日時, https://www.xxx.ac.jp/...
+    2. 機関名. (アクセス日). タイトル. 取得日時, https://www.xxx.org/...
+    
+    ### 検証済みオンラインリソース
+    1. サイト名. (アクセス日). タイトル. 取得日時, https://www.xxx.com/... - [信頼性の根拠]
+    2. サイト名. (アクセス日). タイトル. 取得日時, https://www.xxx.com/... - [信頼性の根拠]
+    
+    **信頼性評価基準（必須遵守）**：
+    - **学術的価値**: 査読済み論文、学術誌、大学・研究機関の出版物を最優先
+    - **公式性**: 文部科学省、教育委員会、国際教育機関の公式文書を重視
+    - **時効性**: 最新の情報源（5年以内）を優先、古い情報は学術的価値が高い場合のみ
+    - **著者・機関の信頼性**: 著名な研究者、権威ある教育機関、国際的に認められた組織
+    - **検証可能性**: URL、DOI、ISBN等の識別子が明確に記載されていること
+    - **内容の質**: 具体的なデータ、統計、研究結果に基づく情報を優先
+    - **偏りの排除**: 商業的・宣伝的な内容は除外、客観的・学術的な内容のみ
+    - **学習適性**: 中学生・高校生の学習レベルに適した内容であること
+    
+    **除外基準**：
+    - 個人ブログ、SNS投稿、匿名情報源
+    - 商業的・宣伝的なウェブサイト
+    - 学術的根拠のない一般サイト
+    - 古すぎる情報（15年以上前）で学術的価値のないもの
+    - 学習レベルに不適切な内容
+    
+    **出力条件**：
+    - レポートで実際に引用された情報源のみを含める
+    - 各情報源の信頼性根拠を簡潔に記載
+    - 中学生・高校生の学習に適した内容を重視
+    - 日本語と英語の情報源を適切に分類
+    - アウトライン構造に基づく論理的な整理
+    - キーワードに関連する情報源を重点的に選択
+    - 出力は日本語で統一
+    - APA形式の統一された引用形式を使用
+    """  # noqa: E501
 
-出力フォーマット：
-## 参考文献
-
-### 学術文献・研究論文
-1. [著者名] (出版年). [タイトル]. [出版社/雑誌名]. DOI: [DOI番号]
-2. [著者名] (出版年). [タイトル]. [出版社/雑誌名]. DOI: [DOI番号]
-
-### 公式ガイドライン・政策文書
-1. [文部科学省] (年度). [タイトル]. [URL]
-2. [教育委員会] (年度). [タイトル]. [URL]
-
-### 信頼できる教育機関・組織のリソース
-1. [機関名] (アクセス日). [タイトル]. [URL]
-2. [機関名] (アクセス日). [タイトル]. [URL]
-
-### 検証済みオンラインリソース
-1. [サイト名] (アクセス日). [タイトル]. [URL] - [信頼性の根拠]
-2. [サイト名] (アクセス日). [タイトル]. [URL] - [信頼性の根拠]
-
-**信頼性評価基準（必須遵守）**：
-- **学術的価値**: 査読済み論文、学術誌、大学・研究機関の出版物を最優先
-- **公式性**: 文部科学省、教育委員会、国際教育機関の公式文書を重視
-- **時効性**: 最新の情報源（3年以内）を優先、古い情報は学術的価値が高い場合のみ
-- **著者・機関の信頼性**: 著名な研究者、権威ある教育機関、国際的に認められた組織
-- **検証可能性**: URL、DOI、ISBN等の識別子が明確に記載されていること
-- **内容の質**: 具体的なデータ、統計、研究結果に基づく情報を優先
-- **偏りの排除**: 商業的・宣伝的な内容は除外、客観的・学術的な内容のみ
-
-**除外基準**：
-- 個人ブログ、SNS投稿、匿名情報源
-- 商業的・宣伝的なウェブサイト
-- 学術的根拠のない一般サイト
-- 古すぎる情報（10年以上前）で学術的価値のないもの
-
-**出力条件**：
-- レポートで実際に引用された情報源のみを含める
-- 各情報源の信頼性根拠を簡潔に記載
-- 中学生・高校生の学習に適した内容を重視
-- 日本語と英語の情報源を適切に分類
-- 出力は日本語で統一
-    """
-
-    query = dspy.InputField(desc="Query", format=str)
-    report_content = dspy.InputField(desc="Report content", format=str)
-    search_results = dspy.InputField(desc="Search results used", format=str)
-    references = dspy.OutputField(desc="Generated references", format=str)
+    query = dspy.InputField(desc="クエリー", format=str)
+    report_content = dspy.InputField(desc="レポート内容", format=str)
+    search_results = dspy.InputField(desc="使用された検索結果", format=str)
+    outline_structure = dspy.InputField(desc="アウトライン構造", format=str)
+    keywords = dspy.InputField(desc="重要なキーワード", format=str)
+    references = dspy.OutputField(desc="生成された参考文献", format=str)
 
 
 class WriteIntegratedSection(dspy.Signature):
@@ -343,48 +380,235 @@ class StreamConclusionWriter(StreamLineWriter):
         self.conclusion = conclusion
 
 
+import logging
+from typing import Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+
 class StreamRelatedTopicsWriter(StreamLineWriter):
     def __init__(self, lm=None) -> None:
         super().__init__(lm=lm, signature_cls=WriteRelatedTopics)
         self.grammar_analyzer = get_grammar_analyzer()
 
-    async def __call__(self, query: str) -> AsyncGenerator[str, None]:
-        # 文法構造解析を実行
-        analysis = self.grammar_analyzer.analyze_text(query)
+    async def __call__(
+        self, 
+        query: str, 
+        outline_structure: Optional[Dict] = None,
+        keywords: Optional[List[str]] = None,
+        grammar_analysis: Optional[Dict] = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        アウトライン構造、キーワード、文法解析結果を基に関連トピックを生成
         
-        # 解析結果をクエリに追加
-        enhanced_query = query
-        if analysis['grammar_structures']:
-            grammar_info = "\n\n検出された文法構造:\n"
-            for structure in analysis['grammar_structures']:
-                grammar_info += f"- {structure}\n"
-            enhanced_query += grammar_info
+        Args:
+            query: クエリー
+            outline_structure: アウトライン構造（Outlineオブジェクト）
+            keywords: 重要なキーワードリスト
+            grammar_analysis: 文法解析結果
+            
+        Yields:
+            str: 関連トピックの生成結果
+        """
+        # アウトライン構造をテキストに変換
+        outline_text = ""
+        if outline_structure:
+            outline_text = self._convert_outline_to_text(outline_structure)
         
-        if analysis['related_topics']:
-            related_info = "\n\n関連文法項目:\n"
-            for topic in analysis['related_topics'][:3]:
-                related_info += f"- {topic}\n"
-            enhanced_query += related_info
+        # キーワードをテキストに変換
+        keywords_text = ""
+        if keywords:
+            keywords_text = ", ".join(keywords)
         
-        async for chunk in self.generate({"query": enhanced_query}):
+        # 文法解析結果をテキストに変換
+        grammar_text = ""
+        if grammar_analysis:
+            grammar_text = self._convert_grammar_analysis_to_text(grammar_analysis)
+        else:
+            # 文法解析が提供されていない場合は実行
+            analysis = self.grammar_analyzer.analyze_text(query)
+            grammar_text = self._convert_grammar_analysis_to_text(analysis)
+        
+        # 関連トピック生成
+        async for chunk in self.generate({
+            "query": query,
+            "outline_structure": outline_text,
+            "keywords": keywords_text,
+            "grammar_analysis": grammar_text
+        }):
             yield chunk
+        
         related_topics = self.get_generated_text()
         self.related_topics = related_topics
+        logger.info(f"Generated related topics with {len(keywords) if keywords else 0} keywords")
+    
+    def _convert_outline_to_text(self, outline: Dict) -> str:
+        """
+        アウトライン構造をテキスト形式に変換
+        
+        Args:
+            outline: Outlineオブジェクト
+            
+        Returns:
+            str: アウトライン構造のテキスト表現
+        """
+        try:
+            text_parts = []
+            
+            # タイトル
+            if hasattr(outline, 'title') and outline.title:
+                text_parts.append(f"タイトル: {outline.title}")
+            
+            # セクション構造
+            if hasattr(outline, 'section_outlines') and outline.section_outlines:
+                text_parts.append("\nセクション構造:")
+                for i, section in enumerate(outline.section_outlines, 1):
+                    text_parts.append(f"  {i}. {section.title}")
+                    
+                    # サブセクション
+                    if hasattr(section, 'subsection_outlines') and section.subsection_outlines:
+                        for j, subsection in enumerate(section.subsection_outlines, 1):
+                            text_parts.append(f"    {i}.{j} {subsection.title}")
+            
+            result = "\n".join(text_parts)
+            if not result.strip():
+                return "アウトライン構造の変換に失敗しました"
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Failed to convert outline to text: {e}")
+            return "アウトライン構造の変換に失敗しました"
+    
+    def _convert_grammar_analysis_to_text(self, grammar_analysis: Dict) -> str:
+        """
+        文法解析結果をテキスト形式に変換
+        
+        Args:
+            grammar_analysis: 文法解析結果
+            
+        Returns:
+            str: 文法解析結果のテキスト表現
+        """
+        try:
+            text_parts = []
+            
+            # 検出された文法構造
+            if hasattr(grammar_analysis, 'grammar_structures') and grammar_analysis.grammar_structures:
+                text_parts.append("検出された文法構造:")
+                for structure in grammar_analysis.grammar_structures:
+                    text_parts.append(f"  - {structure}")
+            
+            # 関連トピック
+            if hasattr(grammar_analysis, 'related_topics') and grammar_analysis.related_topics:
+                text_parts.append("\n関連トピック:")
+                for topic in grammar_analysis.related_topics:
+                    text_parts.append(f"  - {topic}")
+            
+            # 学習ポイント
+            if hasattr(grammar_analysis, 'learning_points') and grammar_analysis.learning_points:
+                text_parts.append("\n学習ポイント:")
+                for point in grammar_analysis.learning_points:
+                    text_parts.append(f"  - {point}")
+            
+            # 難易度
+            if hasattr(grammar_analysis, 'difficulty_level') and grammar_analysis.difficulty_level:
+                text_parts.append(f"\n難易度: {grammar_analysis.difficulty_level}")
+            
+            result = "\n".join(text_parts)
+            if not result.strip():
+                return "文法解析結果の変換に失敗しました"
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Failed to convert grammar analysis to text: {e}")
+            return "文法解析結果の変換に失敗しました"
 
 
 class StreamReferencesWriter(StreamLineWriter):
     def __init__(self, lm=None) -> None:
         super().__init__(lm=lm, signature_cls=WriteReferences)
 
-    async def __call__(self, query: str, report_content: str, search_results: str) -> AsyncGenerator[str, None]:
+    async def __call__(
+        self, 
+        query: str, 
+        report_content: str, 
+        search_results: str,
+        outline_structure: Optional[Dict] = None,
+        keywords: Optional[List[str]] = None
+    ) -> AsyncGenerator[str, None]:
+        """
+        レポート内容、検索結果、アウトライン構造、キーワードを基に参考文献を生成
+        
+        Args:
+            query: クエリー
+            report_content: レポート内容
+            search_results: 使用された検索結果
+            outline_structure: アウトライン構造（Outlineオブジェクト）
+            keywords: 重要なキーワードリスト
+            
+        Yields:
+            str: 参考文献の生成結果
+        """
+        # アウトライン構造をテキストに変換
+        outline_text = ""
+        if outline_structure:
+            outline_text = self._convert_outline_to_text(outline_structure)
+        
+        # キーワードをテキストに変換
+        keywords_text = ""
+        if keywords:
+            keywords_text = ", ".join(keywords)
+        
+        # 参考文献生成
         async for chunk in self.generate({
             "query": query, 
             "report_content": report_content, 
-            "search_results": search_results
+            "search_results": search_results,
+            "outline_structure": outline_text,
+            "keywords": keywords_text
         }):
             yield chunk
+        
         references = self.get_generated_text()
         self.references = references
+        logger.info(f"Generated references with {len(keywords) if keywords else 0} keywords")
+    
+    def _convert_outline_to_text(self, outline: Dict) -> str:
+        """
+        アウトライン構造をテキスト形式に変換
+        
+        Args:
+            outline: Outlineオブジェクト
+            
+        Returns:
+            str: アウトライン構造のテキスト表現
+        """
+        try:
+            text_parts = []
+            
+            # タイトル
+            if hasattr(outline, 'title') and outline.title:
+                text_parts.append(f"タイトル: {outline.title}")
+            
+            # セクション構造
+            if hasattr(outline, 'section_outlines') and outline.section_outlines:
+                text_parts.append("\nセクション構造:")
+                for i, section in enumerate(outline.section_outlines, 1):
+                    text_parts.append(f"  {i}. {section.title}")
+                    
+                    # サブセクション
+                    if hasattr(section, 'subsection_outlines') and section.subsection_outlines:
+                        for j, subsection in enumerate(section.subsection_outlines, 1):
+                            text_parts.append(f"    {i}.{j} {subsection.title}")
+            
+            result = "\n".join(text_parts)
+            if not result.strip():
+                return "アウトライン構造の変換に失敗しました"
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Failed to convert outline to text: {e}")
+            return "アウトライン構造の変換に失敗しました"
 
 
 class StreamIntegratedSectionWriter(StreamLineWriter):

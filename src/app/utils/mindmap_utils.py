@@ -26,7 +26,10 @@ markmap:
         num_headers = len([line for line in mindmap.split("\n") if line.strip().startswith("#")])
         num_subheaders = len([line for line in mindmap.split("\n") if line.strip().startswith("##")])
         height = 15 * (num_subheaders + num_headers) + 200
-        return markmap(data, height=height)
+        
+        # マインドマップを表示
+        markmap(data, height=height)
+        
     except ImportError:
         st.error("streamlit-markmap is not installed")
         return None 

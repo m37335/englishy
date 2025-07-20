@@ -199,7 +199,7 @@ async def _start_research(query, include_web_search, include_mindmap, search_dep
         progress_bar.progress(15)
         
         # Query refinement with grammar analysis
-        refinement_result = query_refiner.grammar_aware_refiner(query=query)
+        refinement_result = query_refiner.grammar_aware_refiner(text=query)
         refined_query = refinement_result["refined_query"]
         
         st.info(f"Refined query: {refined_query}")

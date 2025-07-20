@@ -5,4 +5,5 @@ duckduckgo-search>=4.1.0
 streamlit-markmap>=0.0.3
 pydantic>=2.0.0
 python-dotenv>=1.0.0 
-pytest>=7.0.0 
+pytest>=7.0.0
+faiss-cpu>=1.7.0 

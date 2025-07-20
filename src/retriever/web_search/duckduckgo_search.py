@@ -5,7 +5,7 @@ DuckDuckGo search for English learning content.
 import requests
 from typing import List, Dict, Any, Optional
 import logging
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 
 logger = logging.getLogger(__name__)
 
